@@ -11,10 +11,61 @@ const layers = feria.layers as RawLayer[];
 const objectLayer = layers.find((l) => l.name === 'objects');
 const objects = parseObjects({ objects: objectLayer?.objects ?? [] }, TILE_SIZE);
 
+/** The compact town: these mirror the layout constants at the top of buildFeria() in tools/gen-maps.mjs. */
+const MAP_W = 34;
+const MAP_H = 22;
+const ROW_A_DOOR_Y = 6;
+const ROW_B_DOOR_Y = 14;
+const AVENUE_X = [16, 17];
+/** The player walks one tile per 160 ms, about 6 tiles a second: 40 steps is under 7 seconds. */
+const MAX_STEPS_FROM_SPAWN = 40;
+const ROW_A = ['ml-classifier', 'java-service', 'secure-voting', 'caseta', 'dashboard'];
+const ROW_B = ['about', 'action-detection', 'volunteer-pwa'];
+
+const layer = (name: string) => layers.find((l) => l.name === name)!.data!;
+const at = (data: number[], x: number, y: number) => data[y * feria.width + x];
+const spawnTile = () => objects.find((o) => o.type === 'spawn' && o.id === 'portada')!.tile;
+const building = (id: string) => {
+  const found = objects.filter((o) => o.type === 'building' && o.id === id);
+  expect(found.length, id).toBe(1);
+  return found[0];
+};
+
+/** Walking steps from the portada spawn to every reachable walkable tile (BFS over the collision layer). */
+function stepsFromSpawn(): Map<number, number> {
+  const blocked = layer('collision');
+  const key = (x: number, y: number) => y * feria.width + x;
+  const spawn = spawnTile();
+  const dist = new Map([[key(spawn.x, spawn.y), 0]]);
+  const queue = [spawn];
+  while (queue.length > 0) {
+    const { x, y } = queue.shift()!;
+    const d = dist.get(key(x, y))!;
+    for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+      if (nx < 0 || ny < 0 || nx >= feria.width || ny >= feria.height) continue;
+      if (blocked[key(nx, ny)] !== 0 || dist.has(key(nx, ny))) continue;
+      dist.set(key(nx, ny), d + 1);
+      queue.push({ x: nx, y: ny });
+    }
+  }
+  return dist;
+}
+
+/** Steps to walk into (or face) a solid object tile: the nearest walkable neighbour plus one. */
+function stepsTo(dist: Map<number, number>, x: number, y: number): number {
+  const near = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
+    .filter(([nx, ny]) => nx >= 0 && ny >= 0 && nx < feria.width && ny < feria.height)
+    .map(([nx, ny]) => dist.get(ny * feria.width + nx))
+    .filter((d): d is number => d !== undefined);
+  return near.length > 0 ? Math.min(...near) + 1 : Infinity;
+}
+
 describe('feria.json', () => {
-  it('is a 40x30 map of 16px tiles with the five layers', () => {
-    expect(feria.width).toBe(40);
-    expect(feria.height).toBe(30);
+  it('is a compact 34x22 town of 16px tiles with the five layers', () => {
+    expect(feria.width).toBe(MAP_W);
+    expect(feria.height).toBe(MAP_H);
+    expect(feria.width).toBeLessThanOrEqual(34);
+    expect(feria.height).toBeLessThanOrEqual(23);
     expect(feria.tilewidth).toBe(TILE_SIZE);
     expect(layers.map((l) => l.name)).toEqual(['ground', 'decor', 'overhead', 'collision', 'objects']);
   });
@@ -46,52 +97,110 @@ describe('feria.json', () => {
   it('has a distant fairground attraction drawn from feria-custom tiles, behind collision', () => {
     const noria = objects.find((o) => o.type === 'sign' && o.id === 'noria');
     expect(noria).toBeDefined();
-    const at = (name: string) => layers.find((l) => l.name === name)!.data![noria!.tile.y * feria.width + noria!.tile.x];
-    expect(at('collision')).not.toBe(0);
-    expect(at('decor')).toBeGreaterThanOrEqual(feria.tilesets[1].firstgid);
+    expect(at(layer('collision'), noria!.tile.x, noria!.tile.y)).not.toBe(0);
+    expect(at(layer('decor'), noria!.tile.x, noria!.tile.y)).toBeGreaterThanOrEqual(feria.tilesets[1].firstgid);
   });
 
   it('keeps every building, NPC and sign reachable on foot from the portada', () => {
-    const blocked = layers.find((l) => l.name === 'collision')!.data!;
-    const key = (x: number, y: number) => y * feria.width + x;
-    const spawn = objects.find((o) => o.type === 'spawn' && o.id === 'portada')!.tile;
-    const seen = new Set([key(spawn.x, spawn.y)]);
-    const queue = [spawn];
-    while (queue.length > 0) {
-      const { x, y } = queue.shift()!;
-      for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
-        if (nx < 0 || ny < 0 || nx >= feria.width || ny >= feria.height) continue;
-        if (blocked[key(nx, ny)] !== 0 || seen.has(key(nx, ny))) continue;
-        seen.add(key(nx, ny));
-        queue.push({ x: nx, y: ny });
-      }
-    }
+    const dist = stepsFromSpawn();
     for (const o of objects.filter((o) => ['building', 'door', 'npc', 'sign'].includes(o.type))) {
       const { x, y } = o.tile;
-      const reachable = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].some(([nx, ny]) => seen.has(key(nx, ny)));
-      expect(reachable, `${o.type} ${o.id} at ${x},${y}`).toBe(true);
+      expect(stepsTo(dist, x, y), `${o.type} ${o.id} at ${x},${y}`).toBeLessThan(Infinity);
     }
   });
 
-  it('places the CV project casetas on their streets, drawn from feria-projects, with a walkable approach', () => {
-    const collision = layers.find((l) => l.name === 'collision')!.data!;
-    const decor = layers.find((l) => l.name === 'decor')!.data!;
-    const at = (data: number[], x: number, y: number) => data[y * feria.width + x];
-    const doorRow = { 'secure-voting': 6, 'action-detection': 16, 'volunteer-pwa': 16 };
-    for (const [id, row] of Object.entries(doorRow)) {
-      const door = objects.filter((o) => o.type === 'building' && o.id === id);
-      expect(door.length, id).toBe(1);
-      const { x, y } = door[0].tile;
-      expect(y, id).toBe(row);
+  it('puts every door within a short walk of the spawn (40 steps, under 7 seconds)', () => {
+    const dist = stepsFromSpawn();
+    const steps = objects.filter((o) => o.type === 'building').map((o) => ({ id: o.id, steps: stepsTo(dist, o.tile.x, o.tile.y) }));
+    for (const { id, steps: n } of steps) expect(n, id).toBeLessThanOrEqual(MAX_STEPS_FROM_SPAWN);
+    expect(Math.max(...steps.map((s) => s.steps))).toBeLessThanOrEqual(MAX_STEPS_FROM_SPAWN);
+  });
+
+  it('puts the portada spawn just below the second row', () => {
+    const spawn = spawnTile();
+    expect(spawn.y).toBeGreaterThan(ROW_B_DOOR_Y);
+    expect(spawn.y - ROW_B_DOOR_Y).toBeLessThanOrEqual(6);
+  });
+
+  it('lines up the top street casetas in one row, left to right, with tight gaps', () => {
+    const doors = ROW_A.map((id) => building(id).tile);
+    for (const [i, d] of doors.entries()) expect(d.y, ROW_A[i]).toBe(ROW_A_DOOR_Y);
+    for (let i = 1; i < doors.length; i++) {
+      // Five-wide casetas have their door in the middle column, Caseta-musica (7 wide) in column 3,
+      // so door-to-door spacing is the half widths plus a gap of 1-2 tiles.
+      const spacing = doors[i].x - doors[i - 1].x;
+      expect(spacing, `${ROW_A[i - 1]} -> ${ROW_A[i]}`).toBeGreaterThanOrEqual(6);
+      expect(spacing, `${ROW_A[i - 1]} -> ${ROW_A[i]}`).toBeLessThanOrEqual(8);
+    }
+  });
+
+  it('brings the second row up to a few tiles below the top street', () => {
+    for (const id of ROW_B) expect(building(id).tile.y, id).toBe(ROW_B_DOOR_Y);
+    expect(ROW_B_DOOR_Y - ROW_A_DOOR_Y).toBeLessThanOrEqual(8);
+  });
+
+  it('sets every caseta on its door tile with a walkable approach in front', () => {
+    const collision = layer('collision');
+    const decor = layer('decor');
+    for (const id of [...ROW_A, ...ROW_B]) {
+      const { x, y } = building(id).tile;
       expect(at(collision, x, y), id).not.toBe(0);
+      expect(at(decor, x, y), `${id} facade`).not.toBe(0);
       expect(at(collision, x, y + 1), `${id} approach`).toBe(0);
+    }
+    const contact = building('contact').tile;
+    expect(at(collision, contact.x, contact.y + 1), 'contact approach').toBe(0);
+  });
+
+  it('draws the CV project casetas from feria-projects', () => {
+    const decor = layer('decor');
+    for (const id of ['secure-voting', 'action-detection', 'volunteer-pwa']) {
+      const { x, y } = building(id).tile;
       expect(at(decor, x, y), id).toBeGreaterThanOrEqual(feria.tilesets[2].firstgid);
     }
   });
 
-  it('keeps the middle of the avenue walkable from the street down to the portada', () => {
-    const collision = layers.find((l) => l.name === 'collision')!.data!;
-    for (let y = 7; y < 29; y++) for (const x of [19, 20]) expect(collision[y * feria.width + x], `${x},${y}`).toBe(0);
+  it('keeps the avenue walkable end to end, from the portada up to the top street', () => {
+    const collision = layer('collision');
+    const spawn = spawnTile();
+    expect(AVENUE_X).toContain(spawn.x);
+    for (let y = ROW_A_DOOR_Y + 1; y < feria.height - 1; y++) for (const x of AVENUE_X) expect(at(collision, x, y), `${x},${y}`).toBe(0);
+  });
+
+  it('blocks the perimeter fence all the way round', () => {
+    const collision = layer('collision');
+    for (let x = 0; x < feria.width; x++) {
+      expect(at(collision, x, 0), `${x},0`).not.toBe(0);
+      expect(at(collision, x, feria.height - 1), `${x},bottom`).not.toBe(0);
+    }
+    for (let y = 0; y < feria.height; y++) {
+      expect(at(collision, 0, y), `0,${y}`).not.toBe(0);
+      expect(at(collision, feria.width - 1, y), `right,${y}`).not.toBe(0);
+    }
+  });
+
+  it('blocks every NPC and sign tile', () => {
+    const collision = layer('collision');
+    for (const o of objects.filter((o) => o.type === 'npc' || o.type === 'sign')) expect(at(collision, o.tile.x, o.tile.y), o.id).not.toBe(0);
+  });
+
+  it('keeps bunting and garlands off the doors and the name tags above them', () => {
+    const overhead = layer('overhead');
+    for (const o of objects.filter((o) => o.type === 'building')) {
+      for (const dy of [0, -1]) expect(at(overhead, o.tile.x, o.tile.y + dy), `${o.id} ${dy}`).toBe(0);
+    }
+  });
+
+  it('keeps the name tags of neighbouring buildings from overlapping', () => {
+    // GridScene draws each tag in 8px monospace (about 4.8px a character) plus 2px padding a side,
+    // centred on the door tile; doors on the same row must leave room for both half widths.
+    const tagWidth = (id: string) => projects[id].title.length * 4.8 + 4;
+    for (const row of [ROW_A, ROW_B]) {
+      for (let i = 1; i < row.length; i++) {
+        const gap = (building(row[i]).tile.x - building(row[i - 1]).tile.x) * TILE_SIZE;
+        expect(gap, `${row[i - 1]} / ${row[i]}`).toBeGreaterThanOrEqual((tagWidth(row[i - 1]) + tagWidth(row[i])) / 2 + 4);
+      }
+    }
   });
 
   it('keeps every NPC line to three dialogue pages at most', () => {

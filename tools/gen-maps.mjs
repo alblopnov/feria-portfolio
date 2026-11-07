@@ -151,138 +151,180 @@ class MapBuilder {
 }
 
 // ---------- Overworld: the feria ground ----------
+// A compact town: two rows of casetas around one short avenue that runs from the portada up to the top
+// street. To enlarge the world, widen/heighten the map and push the rows, avenue and gaps apart here;
+// everything else in buildFeria() is placed relative to these.
+const FERIA_WIDTH = 34;
+const FERIA_HEIGHT = 22;
+/** Door row of the top street (row A) and of the second row (row B); facades rise above their door. */
+const ROW_A_DOOR_Y = 6;
+const ROW_B_DOOR_Y = 14;
+/** Left of the two walkable avenue columns; the portada is centred on them. */
+const AVENUE_X = 16;
+/** x of the first caseta on the top street, and the tiles of albero between neighbouring casetas. */
+const ROW_A_X = 2;
+const CASETA_GAP = 1;
+/** Top row of the portada: its bottom row sits against the fence; the player spawns inside its opening. */
+const GATE_Y = FERIA_HEIGHT - 1 - PIECES.portada.h;
+const SPAWN = { x: AVENUE_X, y: GATE_Y + 2 };
+
+/** The door of a piece is its middle column (column 2 of a five-wide caseta, 3 of Caseta-musica). */
+const doorColumn = (piece) => Math.floor(piece.w / 2);
+
+const WORKS_TEXT = 'UNDER CONSTRUCTION. Hard hats only past the tape! This caseta opens its doors when the project ships.';
+
 function buildFeria() {
-  const m = new MapBuilder(40, 30);
+  const W = FERIA_WIDTH;
+  const H = FERIA_HEIGHT;
+  const m = new MapBuilder(W, H);
   const r = rng(2026);
-  m.fill('ground', 0, 0, 40, 30, () => {
+  m.fill('ground', 0, 0, W, H, () => {
     const v = r();
     return v < 0.75 ? T.ALBERO : v < 0.9 ? T.ALBERO3 : T.ALBERO2;
   });
 
   // Perimeter fence.
-  m.fill('decor', 1, 0, 38, 1, T.FENCE_H);
-  m.fill('decor', 1, 29, 38, 1, T.FENCE_H);
-  m.fill('decor', 0, 1, 1, 28, T.FENCE_V);
-  m.fill('decor', 39, 1, 1, 28, T.FENCE_V);
-  for (const [x, y] of [[0, 0], [39, 0], [0, 29], [39, 29]]) m.set('decor', x, y, T.FENCE_POST);
-  m.block(0, 0, 40, 1);
-  m.block(0, 29, 40, 1);
-  m.block(0, 0, 1, 30);
-  m.block(39, 0, 1, 30);
+  m.fill('decor', 1, 0, W - 2, 1, T.FENCE_H);
+  m.fill('decor', 1, H - 1, W - 2, 1, T.FENCE_H);
+  m.fill('decor', 0, 1, 1, H - 2, T.FENCE_V);
+  m.fill('decor', W - 1, 1, 1, H - 2, T.FENCE_V);
+  for (const [x, y] of [[0, 0], [W - 1, 0], [0, H - 1], [W - 1, H - 1]]) m.set('decor', x, y, T.FENCE_POST);
+  m.block(0, 0, W, 1);
+  m.block(0, H - 1, W, 1);
+  m.block(0, 0, 1, H);
+  m.block(W - 1, 0, 1, H);
 
   // Farolillo strings and bunting along the top.
-  m.fill('decor', 1, 1, 38, 1, T.LANTERNS);
-  m.fill('decor', 1, 2, 38, 1, T.BUNTING);
+  m.fill('decor', 1, 1, W - 2, 1, T.LANTERNS);
+  m.fill('decor', 1, 2, W - 2, 1, T.BUNTING);
 
-  // Row A: casetas facing south onto the first street. The building object sits on the door tile.
+  /** Draws a caseta whose door (bottom row, middle column) is at (doorX, doorY) and puts the building there. */
+  const caseta = (piece, id, x, doorY) => {
+    const doorX = x + doorColumn(piece);
+    m.piece(piece, x, doorY - piece.h + 1);
+    m.object('building', doorX, doorY, { id });
+    return doorX;
+  };
+
+  // Row A: five casetas facing south onto the top street, left to right, CASETA_GAP apart.
   // Locked projects are casetas still being built: scaffolding, caution tape, a sign and a cone.
-  for (const [id, x] of [['ml-classifier', 3], ['java-service', 10], ['dashboard', 32]]) {
-    m.piece(CPIECES.casetaObras, x, 3);
-    m.object('building', x + 2, 6, { id });
-    m.prop(x + 4, 7, ct(CT.OBRAS_SIGN));
-    m.object('sign', x + 4, 7, {
-      id: `${id}-works`,
-      text: 'UNDER CONSTRUCTION. Hard hats only past the tape! This caseta opens its doors when the project ships.',
-    });
-    m.prop(x, 7, ct(CT.CONE));
-  }
-  // Caseta-musica: the one caseta in full feria dress. 7x5 tiles; its entrance (local column 3) is the
-  // building tile, and the albero in front of it is lit by the light spilling out.
-  m.piece(CPIECES.casetaMusica, 24, 2);
-  m.object('building', 27, 6, { id: 'caseta' });
-  m.set('ground', 27, 7, ct(CT.GLOW));
-  // Secure Voting: a little town hall in the gap between the works and Caseta-musica (5x5 tiles,
-  // door in local column 2), with its padlocked ballot box out front.
-  m.piece(PPIECES.secureVoting, 17, 2);
-  m.object('building', 19, 6, { id: 'secure-voting' });
-  m.prop(21, 7, pt(PT.BALLOT_OUT));
-
-  // Bunting and farolillo garlands strung over the street, drawn above the player.
-  m.fill('overhead', 1, 8, 38, 1, ct(CT.PENNANTS));
-  m.fill('overhead', 17, 11, 6, 1, ct(CT.GARLAND));
-  m.fill('overhead', 17, 20, 6, 1, ct(CT.GARLAND));
-  m.fill('overhead', 1, 18, 15, 1, ct(CT.PENNANTS));
-  m.fill('overhead', 24, 18, 15, 1, ct(CT.PENNANTS));
-
-  // Row B: the About house and a terraza with tables on the left, two CV project casetas on the right.
-  m.piece(PIECES.house, 10, 13);
-  m.object('building', 12, 16, { id: 'about' });
-  m.prop(9, 16, T.POT);
-  m.prop(15, 16, T.POT);
-  for (const [x, y] of [[3, 14], [6, 14], [3, 16], [6, 16]]) {
-    m.prop(x, y, T.TABLE);
-    m.prop(x - 1, y, T.CHAIR);
-  }
-  // Action Detection (a football caseta with a camera on a tripod) and Volunteer PWA (a community
-  // caseta with a noticeboard), 5x5 tiles each, doors in local column 2 and lit albero in front.
-  m.piece(PPIECES.actionDetection, 26, 12);
-  m.object('building', 28, 16, { id: 'action-detection' });
-  m.set('ground', 28, 17, ct(CT.GLOW));
-  m.prop(25, 16, pt(PT.CAMERA));
-  m.piece(PPIECES.volunteerPwa, 32, 12);
-  m.object('building', 34, 16, { id: 'volunteer-pwa' });
-  m.set('ground', 34, 17, ct(CT.GLOW));
-  m.prop(37, 16, pt(PT.NOTICE_OUT));
-
-  // Lampposts along the main avenue (x 17..22).
-  for (const y of [11, 20]) {
-    m.prop(16, y, T.LAMPPOST);
-    m.prop(23, y, T.LAMPPOST);
+  const works = (id, x, doorX) => {
+    m.prop(x + 4, ROW_A_DOOR_Y + 1, ct(CT.OBRAS_SIGN));
+    m.object('sign', x + 4, ROW_A_DOOR_Y + 1, { id: `${id}-works`, text: WORKS_TEXT });
+    m.prop(x, ROW_A_DOOR_Y + 1, ct(CT.CONE));
+  };
+  const rowA = [
+    { id: 'ml-classifier', piece: CPIECES.casetaObras, dress: works },
+    { id: 'java-service', piece: CPIECES.casetaObras, dress: works },
+    // Secure Voting: a little town hall with its padlocked ballot box out front.
+    { id: 'secure-voting', piece: PPIECES.secureVoting, dress: (id, x) => m.prop(x + 4, ROW_A_DOOR_Y + 1, pt(PT.BALLOT_OUT)) },
+    // Caseta-musica: the one caseta in full feria dress (7 wide); the albero in front of its entrance is
+    // lit by the light spilling out.
+    { id: 'caseta', piece: CPIECES.casetaMusica, dress: (id, x, doorX) => m.set('ground', doorX, ROW_A_DOOR_Y + 1, ct(CT.GLOW)) },
+    { id: 'dashboard', piece: CPIECES.casetaObras, dress: works },
+  ];
+  let x = ROW_A_X;
+  for (const { id, piece, dress } of rowA) {
+    const doorX = caseta(piece, id, x, ROW_A_DOOR_Y);
+    dress(id, x, doorX);
+    x += piece.w + CASETA_GAP;
   }
 
-  // Contact post box beside the avenue, near the gate.
-  m.prop(24, 23, T.POSTBOX);
-  m.object('building', 24, 23, { id: 'contact' });
+  // Row B: the About house and a terraza on the left of the avenue; Action Detection (a football caseta
+  // with a camera on a tripod) and Volunteer PWA (a community caseta with a noticeboard) on the right,
+  // with lit albero in front of their doors.
+  const houseX = AVENUE_X - 8;
+  caseta(PIECES.house, 'about', houseX, ROW_B_DOOR_Y);
+  m.prop(houseX + 5, ROW_B_DOOR_Y, T.POT);
+  for (const tx of [houseX - 5, houseX - 2]) {
+    for (const ty of [ROW_B_DOOR_Y - 2, ROW_B_DOOR_Y]) {
+      m.prop(tx, ty, T.TABLE);
+      m.prop(tx - 1, ty, T.CHAIR);
+    }
+  }
+  const actionX = AVENUE_X + 5;
+  const actionDoor = caseta(PPIECES.actionDetection, 'action-detection', actionX, ROW_B_DOOR_Y);
+  m.set('ground', actionDoor, ROW_B_DOOR_Y + 1, ct(CT.GLOW));
+  m.prop(actionX - 1, ROW_B_DOOR_Y, pt(PT.CAMERA));
+  const volunteerX = actionX + PPIECES.actionDetection.w + CASETA_GAP;
+  const volunteerDoor = caseta(PPIECES.volunteerPwa, 'volunteer-pwa', volunteerX, ROW_B_DOOR_Y);
+  m.set('ground', volunteerDoor, ROW_B_DOOR_Y + 1, ct(CT.GLOW));
+  m.prop(volunteerX + 5, ROW_B_DOOR_Y, pt(PT.NOTICE_OUT));
 
-  // A welcome sign and a flamenca NPC near the gate.
-  m.prop(16, 23, T.SIGN);
-  m.object('sign', 16, 23, {
+  // Lampposts flanking the avenue, with farolillo garlands strung between them (drawn above the player).
+  for (const y of [ROW_A_DOOR_Y + 3, ROW_B_DOOR_Y - 1]) {
+    m.prop(AVENUE_X - 1, y, T.LAMPPOST);
+    m.prop(AVENUE_X + 2, y, T.LAMPPOST);
+    m.fill('overhead', AVENUE_X, y, 2, 1, ct(CT.GARLAND));
+  }
+
+  // Bunting over the street between the rows and over the street in front of the gate (clear of the post box).
+  m.fill('overhead', 1, ROW_A_DOOR_Y + 2, W - 2, 1, ct(CT.PENNANTS));
+  m.fill('overhead', 1, GATE_Y - 1, AVENUE_X - 3, 1, ct(CT.PENNANTS));
+  m.fill('overhead', AVENUE_X + 5, GATE_Y - 1, W - AVENUE_X - 6, 1, ct(CT.PENNANTS));
+
+  // Contact post box just right of the gate.
+  m.prop(AVENUE_X + 4, GATE_Y, T.POSTBOX);
+  m.object('building', AVENUE_X + 4, GATE_Y, { id: 'contact' });
+
+  // A welcome sign just left of the gate, and the Credits sign beside it: every asset in the game is
+  // original and generated by the scripts in tools/.
+  m.prop(AVENUE_X - 3, GATE_Y, T.SIGN);
+  m.object('sign', AVENUE_X - 3, GATE_Y, {
     id: 'welcome-sign',
     text: 'Welcome to the Feria! Each caseta is one of my projects. Walk into a door to go inside, and press Z or Enter to talk to people and read signs.',
   });
-  // The Credits sign: every asset in the game is original and generated by the scripts in tools/.
-  m.piece(CPIECES.creditsSign, 12, 23);
-  for (const x of [12, 13]) {
-    m.object('sign', x, 23, {
+  const creditsX = AVENUE_X - 6;
+  m.piece(CPIECES.creditsSign, creditsX, GATE_Y);
+  for (const cx of [creditsX, creditsX + 1]) {
+    m.object('sign', cx, GATE_Y, {
       id: 'credits',
       text: 'CREDITS. Every tile, sprite, sign and sound in this feria is original, made by the Node scripts in tools/ (gen-assets, gen-maps, gen-audio). There are no third-party assets. Built with Phaser 3, TypeScript and Vite. Full list in CREDITS.md.',
     });
   }
-  m.block(21, 22);
-  m.object('npc', 21, 22, {
+
+  // The flamenca greets you just inside the gate, beside the avenue.
+  m.block(AVENUE_X + 2, GATE_Y - 1);
+  m.object('npc', AVENUE_X + 2, GATE_Y - 1, {
     id: 'flamenca',
     text: "Hola! The red caseta up north is Caseta-musica, a party jukebox. The town hall, the football caseta and the volunteers' caseta are finished projects too, so step inside. The green ones are still being built.",
   });
 
   // Two more feriantes with tips and hints about what's coming.
-  m.block(8, 9);
-  m.object('npc', 8, 9, {
+  m.block(6, ROW_A_DOOR_Y + 3);
+  m.object('npc', 6, ROW_A_DOOR_Y + 3, {
     id: 'feriante',
     text: "Those green casetas behind the tape? One will be an ML classifier, one a Java service, and the far one a dashboard for everything running in Docker. They open when they're ready.",
   });
-  m.block(30, 20);
-  m.object('npc', 30, 20, {
+  // The senor strolls by the noria, out of the alley between the two CV casetas.
+  const noriaX = W - 2 - CPIECES.noria.w;
+  m.block(noriaX - 3, GATE_Y);
+  m.object('npc', noriaX - 3, GATE_Y, {
     id: 'senor',
     text: 'Explore everything: walk into a door to go in, and press Z (or tap A) at signs and people. The blue-tiled house is the author\'s, the jukebox in the red caseta tells its story, and the post box by the gate has the contact links.',
   });
 
-  // A small noria (ferris wheel) at the far end of the ground: decorative, fenced off by collision.
-  m.piece(CPIECES.noria, 32, 21);
-  m.object('sign', 34, 24, {
+  // A small noria (ferris wheel) in the bottom-right corner: decorative, fenced off by collision. Its
+  // sign is the top of the wheel, read from the street above.
+  m.piece(CPIECES.noria, noriaX, GATE_Y);
+  m.object('sign', noriaX + 2, GATE_Y, {
     id: 'noria',
     text: 'La noria. It is closed tonight, but it looks lovely from down here.',
   });
 
-  // Flower pots along the bottom fence, leaving the portada clear.
-  for (let x = 2; x < 38; x += 3) if (x < 16 || x > 23) m.prop(x, 28, T.POT);
-
-  // The portada gate; its two middle columns are the walkable opening.
-  m.piece(PIECES.portada, 17, 25);
-  for (let y = 25; y < 29; y++) {
-    m.unblock(19, y);
-    m.unblock(20, y);
+  // Flower pots along the bottom fence, leaving the gate, the post box and the noria clear.
+  for (let px = 2; px < W - 2; px += 3) {
+    if ((px >= AVENUE_X - 3 && px <= AVENUE_X + 4) || px >= noriaX) continue;
+    m.prop(px, H - 2, T.POT);
   }
-  m.object('spawn', 19, 27, { id: 'portada' }, 'portada');
+
+  // The portada gate; its two middle columns are the walkable opening onto the avenue.
+  m.piece(PIECES.portada, AVENUE_X - 2, GATE_Y);
+  for (let y = GATE_Y; y < GATE_Y + PIECES.portada.h; y++) {
+    m.unblock(AVENUE_X, y);
+    m.unblock(AVENUE_X + 1, y);
+  }
+  m.object('spawn', SPAWN.x, SPAWN.y, { id: 'portada' }, 'portada');
 
   return m;
 }
