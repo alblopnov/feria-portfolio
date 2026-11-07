@@ -18,6 +18,7 @@ export class DialogueBox {
   private shown = 0;
   private timer: Phaser.Time.TimerEvent | null = null;
   private open = false;
+  private onClose: (() => void) | null = null;
 
   /** `onType` runs for every other typed letter (the typewriter blip). */
   constructor(
@@ -41,7 +42,9 @@ export class DialogueBox {
     this.container = scene.add.container(MARGIN, top, [frame, this.label, this.arrow]).setScrollFactor(0).setDepth(1000).setVisible(false);
   }
 
-  show(text: string): void {
+  /** Shows `text`; `onClose` runs once when the visitor closes the last page. */
+  show(text: string, onClose?: () => void): void {
+    this.onClose = onClose ?? null;
     this.pages = paginate(text ?? '', CHARS_PER_LINE, LINES_PER_PAGE);
     this.page = 0;
     this.open = true;
@@ -108,5 +111,8 @@ export class DialogueBox {
     this.timer = null;
     this.open = false;
     this.container.setVisible(false);
+    const done = this.onClose;
+    this.onClose = null;
+    done?.();
   }
 }

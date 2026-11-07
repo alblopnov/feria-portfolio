@@ -9,6 +9,7 @@ import { parseObjects, type MapObject } from '../systems/mapObjects';
 import { audioGate, isMuted, playSfx, toggleMute } from '../systems/sound';
 import { isTouchDevice } from '../systems/touchControls';
 import { TouchPad } from '../systems/TouchPad';
+import { LinkOverlay, safeLinks } from '../systems/LinkOverlay';
 
 const KEY_DIRS: Record<string, Direction> = {
   ArrowUp: 'up',
@@ -40,6 +41,8 @@ export abstract class GridScene extends Phaser.Scene {
   protected pos: Tile = { x: 0, y: 0 };
   protected objects: MapObject[] = [];
   protected dialogue!: DialogueBox;
+  /** HTML panel with a project's links, opened after its card closes. */
+  protected links!: LinkOverlay;
   protected player!: Phaser.GameObjects.Sprite;
   private pressed: Direction[] = [];
   /** A key pressed and released between two frames still counts as one step. */
@@ -97,6 +100,8 @@ export abstract class GridScene extends Phaser.Scene {
     ensurePlayerAnims(this);
     this.player = this.add.sprite(tile.x * TILE_SIZE, tile.y * TILE_SIZE, 'player', FRAME_ROW[this.facing] * 3).setOrigin(0, 0).setDepth(DEPTH.player);
     this.dialogue = new DialogueBox(this, () => playSfx(this.game, 'blip', { volume: 0.18 }));
+    this.links = new LinkOverlay(this.game.canvas);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.links.close());
     this.add.image(0, 0, 'vignette').setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.vignette);
     this.setupKeyboard();
     this.setupAudio();
@@ -125,6 +130,11 @@ export abstract class GridScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-M', toggle);
   }
 
+  /** Shows `text` in the dialogue box; when it closes, the project's links open as real anchors. */
+  protected showWithLinks(text: string, project: Project): void {
+    this.dialogue.show(text, () => this.links.open(project.title, safeLinks(project)));
+  }
+
   /** Looks up a map object's project; an unknown id warns and shows a placeholder instead of crashing. */
   protected projectFor(obj: MapObject): Project | undefined {
     const project = getProject(obj.id);
@@ -137,10 +147,11 @@ export abstract class GridScene extends Phaser.Scene {
 
   update(): void {
     if (!this.ready) return;
-    this.touch?.setStickVisible(!this.dialogue.isOpen());
+    const busy = this.dialogue.isOpen() || this.links.isOpen();
+    this.touch?.setStickVisible(!busy);
     if (this.moving) return;
-    if (this.dialogue.isOpen()) {
-      // Movement input is ignored while the dialogue box is open.
+    if (busy) {
+      // Movement input is ignored while the dialogue box or the links panel is open.
       this.tapped = null;
       this.standStill();
       return;
@@ -180,6 +191,10 @@ export abstract class GridScene extends Phaser.Scene {
   }
 
   private onInteractKey(): void {
+    if (this.links.isOpen()) {
+      this.links.close();
+      return;
+    }
     if (this.dialogue.isOpen()) {
       this.dialogue.advance();
       return;
@@ -194,6 +209,12 @@ export abstract class GridScene extends Phaser.Scene {
     if (!kb) return;
     kb.addCapture('UP,DOWN,LEFT,RIGHT,SPACE');
     kb.on('keydown', (e: KeyboardEvent) => {
+      if (this.links.isOpen()) {
+        // Keys pressed on the panel's own anchors and button keep their normal browser behaviour.
+        if (this.links.contains(e.target)) return;
+        if ((INTERACT_KEYS.has(e.code) || e.code === 'Escape') && !e.repeat) this.links.close();
+        return;
+      }
       if (INTERACT_KEYS.has(e.code)) {
         if (!e.repeat) this.onInteractKey();
         return;

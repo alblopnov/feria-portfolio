@@ -70,7 +70,7 @@ export class WorldScene extends GridScene {
       this.scene.start('Interior', data);
     } else {
       // Unlocked with no room, like the Contact post box: show its card right here.
-      this.dialogue.show(projectCard(project));
+      this.showWithLinks(projectCard(project), project);
     }
   }
 }
