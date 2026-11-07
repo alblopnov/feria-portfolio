@@ -2,7 +2,7 @@ import type { Tile } from './gridMovement';
 
 export type MapObject = {
   id: string;
-  type: 'building' | 'npc' | 'sign' | 'door' | 'spawn' | 'exit' | 'jukebox' | 'bookshelf' | 'desk';
+  type: 'building' | 'npc' | 'sign' | 'door' | 'spawn' | 'exit' | 'jukebox' | 'bookshelf' | 'desk' | 'exhibit';
   tile: Tile;
   text?: string;
 };

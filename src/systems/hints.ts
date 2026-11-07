@@ -1,7 +1,7 @@
 import type { Project } from '../content/projects';
 import type { MapObject } from './mapObjects';
 
-const MARKED: ReadonlySet<MapObject['type']> = new Set(['building', 'door', 'npc', 'sign', 'jukebox', 'bookshelf', 'desk']);
+const MARKED: ReadonlySet<MapObject['type']> = new Set(['building', 'door', 'npc', 'sign', 'jukebox', 'bookshelf', 'desk', 'exhibit']);
 
 /** True for everything the player can walk up to and use (not spawn points or exits). */
 export function hasMarker(obj: MapObject): boolean {
@@ -25,6 +25,8 @@ function action(obj: MapObject, project: Project | undefined): string | null {
       return 'Check the bookshelf';
     case 'desk':
       return 'Check the desk';
+    case 'exhibit':
+      return 'Look at the exhibit';
     default:
       return null;
   }

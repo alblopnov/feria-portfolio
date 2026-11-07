@@ -35,6 +35,11 @@ describe('promptFor', () => {
     expect(promptFor(obj('desk', 'about'), getProject('about'), false)).toBe('Z · Check the desk');
   });
 
+  it('offers a look at a project exhibit, with the A label on touch', () => {
+    expect(promptFor(obj('exhibit', 'caseta'), getProject('caseta'), false)).toBe('Z · Look at the exhibit');
+    expect(promptFor(obj('exhibit', 'caseta'), getProject('caseta'), true)).toBe('A · Look at the exhibit');
+  });
+
   it('has no prompt for spawn points and exits', () => {
     expect(promptFor(obj('spawn'), undefined, false)).toBeNull();
     expect(promptFor(obj('exit'), undefined, false)).toBeNull();
@@ -59,7 +64,7 @@ describe('nameTagFor', () => {
 
 describe('hasMarker', () => {
   it('marks everything the player can use', () => {
-    for (const type of ['building', 'door', 'npc', 'sign', 'jukebox', 'bookshelf', 'desk'] as const) {
+    for (const type of ['building', 'door', 'npc', 'sign', 'jukebox', 'bookshelf', 'desk', 'exhibit'] as const) {
       expect(hasMarker(obj(type))).toBe(true);
     }
   });

@@ -50,11 +50,11 @@ export class InteriorScene extends GridScene {
       this.dialogue.show(obj.text ?? '');
       return;
     }
-    if (obj.type !== 'jukebox' && obj.type !== 'bookshelf' && obj.type !== 'desk') return;
+    if (obj.type !== 'jukebox' && obj.type !== 'bookshelf' && obj.type !== 'desk' && obj.type !== 'exhibit') return;
     const project = this.projectFor(obj);
     if (!project) return;
-    if (obj.type === 'jukebox') this.showWithLinks(projectCard(project), project);
-    else if (obj.type === 'bookshelf') this.showWithLinks(skillsText(project), project);
+    // The bookshelf lists skills; the jukebox, the desk and a project's exhibit show its card.
+    if (obj.type === 'bookshelf') this.showWithLinks(skillsText(project), project);
     else this.showWithLinks(projectCard(project), project);
   }
 

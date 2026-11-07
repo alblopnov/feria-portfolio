@@ -32,7 +32,7 @@ const TILESET_TEXTURES: Record<string, string> = { feria: 'tiles', 'feria-custom
 const SOUND_FRAMES = { on: 31, off: 47 };
 export const DEPTH = { npc: 9, player: 10, overhead: 20, vignette: 50, warning: 100, hud: 1100 };
 /** Object types whose `id` must name a project in projects.ts. */
-const PROJECT_TYPES: ReadonlySet<MapObject['type']> = new Set(['building', 'door', 'jukebox', 'bookshelf', 'desk']);
+const PROJECT_TYPES: ReadonlySet<MapObject['type']> = new Set(['building', 'door', 'jukebox', 'bookshelf', 'desk', 'exhibit']);
 
 type RawMap = { layers: { name: string; objects?: Parameters<typeof parseObjects>[0]['objects'] }[] };
 
