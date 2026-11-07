@@ -10,6 +10,8 @@ new Phaser.Game({
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   pixelArt: true,
+  // Two touch points: a thumb on the stick and another on the A button.
+  input: { activePointers: 2 },
   backgroundColor: '#1b1209',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [BootScene, WorldScene, InteriorScene],

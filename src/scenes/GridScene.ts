@@ -7,6 +7,8 @@ import { canMove, resolveDirection, step, type Direction, type Tile } from '../s
 import { facingTile, findInteractable } from '../systems/interaction';
 import { parseObjects, type MapObject } from '../systems/mapObjects';
 import { audioGate, isMuted, playSfx, toggleMute } from '../systems/sound';
+import { isTouchDevice } from '../systems/touchControls';
+import { TouchPad } from '../systems/TouchPad';
 
 const KEY_DIRS: Record<string, Direction> = {
   ArrowUp: 'up',
@@ -47,6 +49,8 @@ export abstract class GridScene extends Phaser.Scene {
   private ready = false;
   private collision!: Phaser.Tilemaps.TilemapLayer;
   private bounds = { width: 0, height: 0 };
+  /** On-screen stick and A button; only created on touch devices. */
+  private touch: TouchPad | null = null;
 
   /** Called for the object in front of the player when Z/Enter is pressed. */
   protected abstract interact(obj: MapObject): void;
@@ -59,6 +63,7 @@ export abstract class GridScene extends Phaser.Scene {
     this.tapped = null;
     this.moving = false;
     this.ready = false;
+    this.touch = null;
     this.facing = facing;
   }
 
@@ -95,6 +100,7 @@ export abstract class GridScene extends Phaser.Scene {
     this.add.image(0, 0, 'vignette').setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.vignette);
     this.setupKeyboard();
     this.setupAudio();
+    this.touch = isTouchDevice() ? new TouchPad(this, () => this.onInteractKey()) : null;
     this.ready = true;
   }
 
@@ -130,14 +136,17 @@ export abstract class GridScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (!this.ready || this.moving) return;
+    if (!this.ready) return;
+    this.touch?.setStickVisible(!this.dialogue.isOpen());
+    if (this.moving) return;
     if (this.dialogue.isOpen()) {
       // Movement input is ignored while the dialogue box is open.
       this.tapped = null;
       this.standStill();
       return;
     }
-    const dir = resolveDirection(this.pressed, this.facing) ?? this.tapped;
+    // Keyboard first, then the touch stick, then a key tapped between two frames.
+    const dir = resolveDirection(this.pressed, this.facing) ?? this.touch?.direction() ?? this.tapped;
     this.tapped = null;
     if (!dir) {
       this.standStill();
