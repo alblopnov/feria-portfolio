@@ -3,6 +3,7 @@ import { GAME_WIDTH, TILE_SIZE } from '../config';
 import { findMissingIds, getProject, type Project } from '../content/projects';
 import { MISSING_PROJECT_TEXT } from '../content/projectText';
 import { DialogueBox } from '../systems/DialogueBox';
+import { doorTiming, prefersReducedMotion } from '../systems/doorTiming';
 import { canMove, resolveDirection, step, type Direction, type Tile } from '../systems/gridMovement';
 import { hasMarker, nameTagFor } from '../systems/hints';
 import { facingTile, findInteractable } from '../systems/interaction';
@@ -49,6 +50,8 @@ export abstract class GridScene extends Phaser.Scene {
   /** A key pressed and released between two frames still counts as one step. */
   private tapped: Direction | null = null;
   private moving = false;
+  /** True while a door animation plays: no walking, talking or advancing text. */
+  protected inputLocked = false;
   /** False until spawnPlayer has run in this scene start (instances are reused across restarts). */
   private ready = false;
   private collision!: Phaser.Tilemaps.TilemapLayer;
@@ -69,6 +72,7 @@ export abstract class GridScene extends Phaser.Scene {
     this.pressed = [];
     this.tapped = null;
     this.moving = false;
+    this.inputLocked = false;
     this.ready = false;
     this.touch = null;
     this.facing = facing;
@@ -111,6 +115,7 @@ export abstract class GridScene extends Phaser.Scene {
     this.setupAudio();
     this.touch = isTouchDevice() ? new TouchPad(this, () => this.onInteractKey()) : null;
     this.addMarkers();
+    this.cameras.main.fadeIn(doorTiming(prefersReducedMotion()).fadeIn, 0, 0, 0);
     this.ready = true;
   }
 
@@ -174,6 +179,10 @@ export abstract class GridScene extends Phaser.Scene {
     if (!this.ready) return;
     const busy = this.dialogue.isOpen() || this.links.isOpen();
     this.touch?.setStickVisible(!busy);
+    if (this.inputLocked) {
+      this.tapped = null;
+      return;
+    }
     if (this.moving) return;
     if (busy) {
       // Movement input is ignored while the dialogue box or the links panel is open.
@@ -218,6 +227,7 @@ export abstract class GridScene extends Phaser.Scene {
   }
 
   private onInteractKey(): void {
+    if (this.inputLocked) return;
     if (this.links.isOpen()) {
       this.links.close();
       return;

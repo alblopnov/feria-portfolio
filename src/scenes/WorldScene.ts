@@ -3,6 +3,8 @@ import { TILE_SIZE } from '../config';
 import { projectCard } from '../content/projectText';
 import { getProject } from '../content/projects';
 import { entersOnWalkIn } from '../systems/doors';
+import { playDoorOpen } from '../systems/DoorAnimation';
+import { doorTiming, prefersReducedMotion } from '../systems/doorTiming';
 import type { Direction, Tile } from '../systems/gridMovement';
 import type { MapObject } from '../systems/mapObjects';
 import { playSfx } from '../systems/sound';
@@ -18,6 +20,7 @@ export class WorldScene extends GridScene {
   private spawnOverride: Tile | null = null;
   /** Set once a walk-in door has started the Interior scene, so one bump cannot start it twice. */
   private entering = false;
+  private map!: Phaser.Tilemaps.Tilemap;
   private npcs = new Map<MapObject, { sprite: Phaser.GameObjects.Sprite; look: number }>();
 
   constructor() {
@@ -32,6 +35,7 @@ export class WorldScene extends GridScene {
 
   create(): void {
     const map = this.buildMap('feria');
+    this.map = map;
 
     this.npcs.clear();
     this.objects
@@ -68,6 +72,19 @@ export class WorldScene extends GridScene {
     if (obj.type === 'building' || obj.type === 'door') this.enterBuilding(obj);
   }
 
+  /** Opens the door, walks the player in and fades out; `go` then starts the next scene. */
+  private openDoorThen(obj: MapObject, go: () => void): void {
+    this.entering = true;
+    this.inputLocked = true;
+    playSfx(this.game, 'door', { volume: 0.5 });
+    const timing = doorTiming(prefersReducedMotion());
+    playDoorOpen(this, this.map, obj.tile, this.player, timing, () => {
+      const cam = this.cameras.main;
+      cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, go);
+      cam.fadeOut(timing.fadeOut, 0, 0, 0);
+    });
+  }
+
   private enterBuilding(obj: MapObject): void {
     const project = this.projectFor(obj);
     if (!project) return;
@@ -75,9 +92,7 @@ export class WorldScene extends GridScene {
       this.dialogue.show(project.teaser);
     } else if (project.interior) {
       const data: InteriorData = { interiorId: project.interior, returnTile: { ...this.pos } };
-      playSfx(this.game, 'door', { volume: 0.5 });
-      this.entering = true;
-      this.scene.start('Interior', data);
+      this.openDoorThen(obj, () => this.scene.start('Interior', data));
     } else {
       // Unlocked with no room, like the Contact post box: show its card right here.
       this.showWithLinks(projectCard(project), project);
