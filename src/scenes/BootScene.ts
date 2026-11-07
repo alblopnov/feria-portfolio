@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH, TILE_SIZE } from '../config';
+import { interiors } from '../content/interiors';
 
 export const LOAD_ERROR_TEXT = "Couldn't load the feria, refresh";
 
@@ -24,6 +25,7 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('player', 'assets/sprites/player.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     this.load.spritesheet('npc', 'assets/sprites/npc.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     this.load.tilemapTiledJSON('feria', 'assets/maps/feria.json');
+    for (const { mapKey, mapFile } of Object.values(interiors)) this.load.tilemapTiledJSON(mapKey, mapFile);
   }
 
   create(): void {
@@ -32,7 +34,7 @@ export class BootScene extends Phaser.Scene {
     const missing = [
       ...this.failed,
       ...(['tiles', 'player', 'npc'] as const).filter((k) => !this.textures.exists(k)),
-      ...(['feria'] as const).filter((k) => !this.cache.tilemap.exists(k)),
+      ...['feria', ...Object.values(interiors).map((i) => i.mapKey)].filter((k) => !this.cache.tilemap.exists(k)),
     ];
     if (missing.length > 0) {
       console.error('Failed to load assets:', [...new Set(missing)]);

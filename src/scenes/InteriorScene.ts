@@ -1,0 +1,66 @@
+import { interiors } from '../content/interiors';
+import { projectCard, skillsText } from '../content/projectText';
+import type { Tile } from '../systems/gridMovement';
+import type { MapObject } from '../systems/mapObjects';
+import { GridScene } from './GridScene';
+import type { WorldData } from './WorldScene';
+
+export type InteriorData = { interiorId: string; returnTile: Tile };
+
+/** One reusable room scene, built from whichever interior map the project points at. */
+export class InteriorScene extends GridScene {
+  private interiorId = '';
+  private returnTile: Tile = { x: 0, y: 0 };
+  private leaving = false;
+
+  constructor() {
+    super('Interior');
+  }
+
+  init(data: InteriorData): void {
+    this.resetInput('up');
+    this.interiorId = data.interiorId;
+    this.returnTile = data.returnTile;
+    this.leaving = false;
+  }
+
+  create(): void {
+    const entry = interiors[this.interiorId];
+    if (!entry || !this.cache.tilemap.exists(entry.mapKey)) {
+      console.warn(`No interior map for ${JSON.stringify(this.interiorId)}; returning to the feria`);
+      this.leave();
+      return;
+    }
+    const map = this.buildMap(entry.mapKey);
+    const spawn = this.objects.find((o) => o.type === 'spawn');
+    this.spawnPlayer(spawn?.tile ?? { x: 1, y: 2 });
+
+    const cam = this.cameras.main;
+    cam.setRoundPixels(true);
+    cam.centerOn(map.widthInPixels / 2, map.heightInPixels / 2);
+  }
+
+  protected onArrive(tile: Tile): void {
+    if (this.objects.some((o) => o.type === 'exit' && o.tile.x === tile.x && o.tile.y === tile.y)) this.leave();
+  }
+
+  protected interact(obj: MapObject): void {
+    if (obj.type === 'npc' || obj.type === 'sign') {
+      this.dialogue.show(obj.text ?? '');
+      return;
+    }
+    if (obj.type !== 'jukebox' && obj.type !== 'bookshelf' && obj.type !== 'desk') return;
+    const project = this.projectFor(obj);
+    if (!project) return;
+    if (obj.type === 'jukebox') this.dialogue.show(projectCard(project));
+    else if (obj.type === 'bookshelf') this.dialogue.show(skillsText(project));
+    else this.dialogue.show(projectCard(project));
+  }
+
+  private leave(): void {
+    if (this.leaving) return;
+    this.leaving = true;
+    const data: WorldData = { spawnTile: this.returnTile, facing: 'down' };
+    this.scene.start('World', data);
+  }
+}

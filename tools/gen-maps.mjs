@@ -206,6 +206,66 @@ function buildFeria() {
   return m;
 }
 
+// ---------- Interiors ----------
+/** A room: two wall rows on top (whitewash + azulejo), wooden floor, void around, exit gap at the bottom. */
+function room(width, height, exitX) {
+  const m = new MapBuilder(width, height);
+  m.fill('ground', 0, 0, width, height, T.VOID);
+  m.fill('ground', 1, 0, width - 2, 1, T.WALL);
+  m.fill('ground', 1, 1, width - 2, 1, T.AZULEJO);
+  m.fill('ground', 1, 2, width - 2, height - 3, (x, y) => ((x + y) % 3 === 0 ? T.WOOD2 : T.WOOD));
+  m.block(0, 0, width, 2);
+  m.block(0, 0, 1, height);
+  m.block(width - 1, 0, 1, height);
+  m.block(0, height - 1, width, 1);
+  m.set('ground', exitX, height - 1, T.MAT);
+  m.unblock(exitX, height - 1);
+  m.object('exit', exitX, height - 1, { id: 'exit' });
+  m.object('spawn', exitX, height - 2, { id: 'entry' }, 'entry');
+  return m;
+}
+
+function buildCasetaInterior() {
+  const m = room(14, 10, 7);
+  m.fill('decor', 1, 1, 12, 1, T.LANTERNS);
+  // Stage with a guitar and two speakers.
+  m.fill('ground', 2, 2, 5, 2, T.STAGE);
+  m.prop(2, 2, T.SPEAKER);
+  m.prop(6, 2, T.SPEAKER);
+  m.prop(4, 2, T.GUITAR);
+  // The jukebox: interacting with it shows the Caseta-musica project card.
+  m.prop(10, 2, T.JUKE_T);
+  m.prop(10, 3, T.JUKE_B);
+  m.object('jukebox', 10, 3, { id: 'caseta' });
+  // Tables and chairs.
+  for (const [x, y] of [[3, 6], [10, 6]]) {
+    m.prop(x, y, T.TABLE);
+    m.prop(x - 1, y, T.CHAIR);
+    m.prop(x + 1, y, T.CHAIR);
+  }
+  m.set('ground', 7, 5, T.RUG);
+  return m;
+}
+
+function buildAboutInterior() {
+  const m = room(12, 9, 6);
+  // Bookshelf (skills) against the back wall.
+  for (const x of [2, 3]) {
+    m.prop(x, 1, T.SHELF_T);
+    m.prop(x, 2, T.SHELF_B);
+    m.object('bookshelf', x, 2, { id: 'about' });
+  }
+  // Desk (the author's story).
+  m.prop(7, 3, T.DESK_L);
+  m.prop(8, 3, T.DESK_R);
+  m.object('desk', 7, 3, { id: 'about' });
+  m.object('desk', 8, 3, { id: 'about' });
+  m.prop(1, 2, T.POT);
+  m.prop(10, 2, T.POT);
+  m.fill('ground', 5, 5, 2, 1, T.RUG);
+  return m;
+}
+
 function save(rel, map) {
   const file = join(root, rel);
   mkdirSync(dirname(file), { recursive: true });
@@ -214,3 +274,5 @@ function save(rel, map) {
 }
 
 save('public/assets/maps/feria.json', buildFeria());
+save('public/assets/maps/caseta.json', buildCasetaInterior());
+save('public/assets/maps/about.json', buildAboutInterior());
