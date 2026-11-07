@@ -1,8 +1,8 @@
 # Feria Portfolio
 
 My developer portfolio, built as a small explorable game set in a Seville feria. You walk down the albero
-street, and each caseta (the striped party tents of the Feria de Abril) is one of my projects. Walk up
-to a door and press a button to step inside, read a project card or check out a caseta that's still
+street, and each caseta (the striped party tents of the Feria de Abril) is one of my projects. Walk
+into a door to step inside, press a button to read a project card, or check out a caseta that's still
 being built.
 
 ![The Caseta-musica caseta, a caseta under construction and the player on the albero street](docs/screenshot.jpg)
@@ -21,7 +21,8 @@ being built.
 | Action | Keyboard | Phone / tablet |
 | --- | --- | --- |
 | Walk | Arrow keys or WASD | Drag the virtual stick (bottom left) |
-| Talk, read, enter, next page | Z or Enter | A button |
+| Enter a caseta | Walk into its door | Push the stick into the door |
+| Talk, read, next page | Z or Enter | A button |
 | Mute / unmute | M | Speaker button (top right) |
 | Hide or show the controls help | H | "? Controls" button (top left) |
 
@@ -29,8 +30,8 @@ A controls cheat sheet sits in the top-left corner. It folds into a small "? Con
 first step (or ten seconds), and the button or the H key brings it back.
 
 Everything you can use is marked: a bobbing arrow floats over doors, signs, people and furniture, each
-building has a name tag ("(soon)" for the ones still being built), and when you face something a bubble
-tells you what the button does, for example "Z · Enter Caseta-musica".
+building has a name tag ("(soon)" for the ones still being built). Walking into an open caseta takes you
+inside; the locked ones, signs, people and furniture need the action button.
 
 Sound starts after your first key press or tap, because browsers block autoplay.
 

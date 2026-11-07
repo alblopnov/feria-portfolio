@@ -5125,7 +5125,7 @@
       {
        "name": "text",
        "type": "string",
-       "value": "Welcome to the Feria! Each caseta is one of my projects. Walk up to a door and press Z or Enter to look inside."
+       "value": "Welcome to the Feria! Each caseta is one of my projects. Walk into a door to go inside, and press Z or Enter to talk to people and read signs."
       }
      ]
     },
@@ -5240,7 +5240,7 @@
       {
        "name": "text",
        "type": "string",
-       "value": "Explore everything: walk up to doors, signs and people and press Z (or tap A). The blue-tiled house is the author's, the jukebox in the red caseta tells its story, and the post box by the gate has the contact links."
+       "value": "Explore everything: walk into a door to go in, and press Z (or tap A) at signs and people. The blue-tiled house is the author's, the jukebox in the red caseta tells its story, and the post box by the gate has the contact links."
       }
      ]
     },

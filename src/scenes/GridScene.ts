@@ -4,7 +4,7 @@ import { findMissingIds, getProject, type Project } from '../content/projects';
 import { MISSING_PROJECT_TEXT } from '../content/projectText';
 import { DialogueBox } from '../systems/DialogueBox';
 import { canMove, resolveDirection, step, type Direction, type Tile } from '../systems/gridMovement';
-import { hasMarker, nameTagFor, promptFor } from '../systems/hints';
+import { hasMarker, nameTagFor } from '../systems/hints';
 import { facingTile, findInteractable } from '../systems/interaction';
 import { parseObjects, type MapObject } from '../systems/mapObjects';
 import { audioGate, isMuted, playSfx, toggleMute } from '../systems/sound';
@@ -55,10 +55,6 @@ export abstract class GridScene extends Phaser.Scene {
   private bounds = { width: 0, height: 0 };
   /** On-screen stick and A button; only created on touch devices. */
   private touch: TouchPad | null = null;
-  /** Bobbing arrows over usable things, and the bubble that names the action in front of the player. */
-  private arrows = new Map<MapObject, Phaser.GameObjects.Triangle>();
-  private prompt: Phaser.GameObjects.Text | null = null;
-  private touchMode = false;
 
   /** Called for the object in front of the player when Z/Enter is pressed. */
   protected abstract interact(obj: MapObject): void;
@@ -66,14 +62,15 @@ export abstract class GridScene extends Phaser.Scene {
   /** Called after every completed step. */
   protected onArrive(_tile: Tile): void {}
 
+  /** Called when a step is blocked, with whatever object stands on the tile the player walked into. */
+  protected onBump(_obj: MapObject | undefined): void {}
+
   protected resetInput(facing: Direction): void {
     this.pressed = [];
     this.tapped = null;
     this.moving = false;
     this.ready = false;
     this.touch = null;
-    this.arrows.clear();
-    this.prompt = null;
     this.facing = facing;
   }
 
@@ -112,13 +109,12 @@ export abstract class GridScene extends Phaser.Scene {
     this.add.image(0, 0, 'vignette').setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.vignette);
     this.setupKeyboard();
     this.setupAudio();
-    this.touchMode = isTouchDevice();
-    this.touch = this.touchMode ? new TouchPad(this, () => this.onInteractKey()) : null;
+    this.touch = isTouchDevice() ? new TouchPad(this, () => this.onInteractKey()) : null;
     this.addMarkers();
     this.ready = true;
   }
 
-  /** Name tags over the buildings, a bobbing arrow over everything usable, and the action bubble (hidden until needed). */
+  /** Name tags over the buildings and a bobbing arrow over everything usable. */
   private addMarkers(): void {
     const markerDepth = DEPTH.overhead + 1;
     for (const obj of this.objects) {
@@ -127,7 +123,6 @@ export abstract class GridScene extends Phaser.Scene {
       const top = obj.tile.y * TILE_SIZE;
       const arrow = this.add.triangle(cx, top - 5, 0, 0, 8, 0, 4, 6, 0xffd24a).setStrokeStyle(1, 0x2e1d12).setDepth(markerDepth);
       this.tweens.add({ targets: arrow, y: arrow.y - 3, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      this.arrows.set(obj, arrow);
       const project = getProject(obj.id);
       const tag = nameTagFor(obj, project);
       if (!tag) continue;
@@ -137,30 +132,6 @@ export abstract class GridScene extends Phaser.Scene {
         .setResolution(4)
         .setDepth(markerDepth);
     }
-    this.prompt = this.add
-      .text(0, 0, '', { fontFamily: 'monospace', fontSize: '8px', color: '#2e1d12', backgroundColor: '#ffd24a', padding: { x: 3, y: 2 } })
-      .setOrigin(0.5, 1)
-      .setResolution(4)
-      .setDepth(markerDepth + 1)
-      .setVisible(false);
-  }
-
-  /** Shows "Z · Enter ..." over the object in front of the player while they stand still and nothing else is open. */
-  private updateHint(busy: boolean): void {
-    const target = !busy && !this.moving ? findInteractable(this.objects, facingTile(this.pos, this.facing)) : undefined;
-    const text = target ? promptFor(target, getProject(target.id), this.touchMode) : null;
-    for (const [obj, arrow] of this.arrows) arrow.setVisible(!(text && obj === target));
-    const prompt = this.prompt;
-    if (!prompt) return;
-    if (!target || !text) {
-      prompt.setVisible(false);
-      return;
-    }
-    if (prompt.text !== text) prompt.setText(text);
-    const view = this.cameras.main.worldView;
-    const half = prompt.displayWidth / 2 + 2;
-    const x = Phaser.Math.Clamp(target.tile.x * TILE_SIZE + TILE_SIZE / 2, view.left + half, view.right - half);
-    prompt.setPosition(x, target.tile.y * TILE_SIZE - 3).setVisible(true);
   }
 
   /** First key or pointer press unlocks audio (browser autoplay rules); the mute button is always on screen. */
@@ -203,7 +174,6 @@ export abstract class GridScene extends Phaser.Scene {
     if (!this.ready) return;
     const busy = this.dialogue.isOpen() || this.links.isOpen();
     this.touch?.setStickVisible(!busy);
-    this.updateHint(busy);
     if (this.moving) return;
     if (busy) {
       // Movement input is ignored while the dialogue box or the links panel is open.
@@ -221,6 +191,7 @@ export abstract class GridScene extends Phaser.Scene {
     this.facing = dir;
     if (!canMove(this.pos, dir, (t) => this.collision.hasTileAt(t.x, t.y), this.bounds)) {
       this.standStill();
+      this.onBump(findInteractable(this.objects, step(this.pos, dir)));
       return;
     }
     const target = step(this.pos, dir);
@@ -276,7 +247,8 @@ export abstract class GridScene extends Phaser.Scene {
         return;
       }
       const dir = KEY_DIRS[e.code];
-      if (dir && !this.pressed.includes(dir)) {
+      // A held key keeps repeating across a scene change; only a fresh press counts, or leaving a room would walk straight back in.
+      if (dir && !e.repeat && !this.pressed.includes(dir)) {
         this.pressed.push(dir);
         this.tapped = dir;
       }

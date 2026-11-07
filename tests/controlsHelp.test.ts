@@ -9,6 +9,15 @@ describe('controlsHelp', () => {
     expect(rows.every((r) => r.label.trim() !== '')).toBe(true);
   });
 
+  it('says walking into a door enters it, in both modes, and keeps Z for talking and reading', () => {
+    for (const touch of [false, true]) {
+      const rows = controlsHelp(touch);
+      expect(rows).toContainEqual({ keys: 'Walk into a door', label: 'Enter' });
+      const action = rows.find((r) => r.keys === 'Z / Enter' || r.keys === 'A button');
+      expect(action?.label).not.toMatch(/enter/i);
+    }
+  });
+
   it('lists the touch controls without keyboard keys', () => {
     const rows = controlsHelp(true);
     const keys = rows.map((r) => r.keys);

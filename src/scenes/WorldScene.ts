@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { TILE_SIZE } from '../config';
 import { projectCard } from '../content/projectText';
+import { getProject } from '../content/projects';
+import { entersOnWalkIn } from '../systems/doors';
 import type { Direction, Tile } from '../systems/gridMovement';
 import type { MapObject } from '../systems/mapObjects';
 import { playSfx } from '../systems/sound';
@@ -14,6 +16,8 @@ export type WorldData ={ spawnTile?: Tile; facing?: Direction };
 
 export class WorldScene extends GridScene {
   private spawnOverride: Tile | null = null;
+  /** Set once a walk-in door has started the Interior scene, so one bump cannot start it twice. */
+  private entering = false;
   private npcs = new Map<MapObject, { sprite: Phaser.GameObjects.Sprite; look: number }>();
 
   constructor() {
@@ -23,6 +27,7 @@ export class WorldScene extends GridScene {
   init(data: WorldData): void {
     this.resetInput(data?.facing ?? 'up');
     this.spawnOverride = data?.spawnTile ?? null;
+    this.entering = false;
   }
 
   create(): void {
@@ -47,6 +52,10 @@ export class WorldScene extends GridScene {
     cam.setRoundPixels(true);
   }
 
+  protected onBump(obj: MapObject | undefined): void {
+    if (obj && !this.entering && entersOnWalkIn(obj, getProject(obj.id))) this.enterBuilding(obj);
+  }
+
   protected interact(obj: MapObject): void {
     if (obj.type === 'npc') {
       const npc = this.npcs.get(obj);
@@ -67,6 +76,7 @@ export class WorldScene extends GridScene {
     } else if (project.interior) {
       const data: InteriorData = { interiorId: project.interior, returnTile: { ...this.pos } };
       playSfx(this.game, 'door', { volume: 0.5 });
+      this.entering = true;
       this.scene.start('Interior', data);
     } else {
       // Unlocked with no room, like the Contact post box: show its card right here.
