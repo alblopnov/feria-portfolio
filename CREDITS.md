@@ -11,6 +11,7 @@ honour.
 | --- | --- | --- |
 | `public/assets/tilesets/feria.png` | Base tileset: albero ground, cobbles, fences, walls, azulejos, furniture, the About house, the portada gate | `tools/gen-assets.mjs` |
 | `public/assets/tilesets/feria-custom.png` | Feria pieces: the Caseta-musica facade (striped lona, scalloped valance, farolillos, lit "CASETA" sign), the under-construction caseta, cones and works signs, overhead bunting and garlands, the Credits sign, the mute icons | `tools/gen-assets.mjs` |
+| `public/assets/tilesets/feria-projects.png` | CV project casetas and rooms: the Secure Voting town hall, the Action Detection football caseta, the Volunteer PWA caseta, their outdoor props, the detection screen, commentary desk, task noticeboard, sign-up table, results board, ballot box, voting booth and carpets | `tools/gen-assets.mjs` |
 | `public/assets/sprites/player.png` | Player walking sprites | `tools/gen-assets.mjs` |
 | `public/assets/sprites/npc.png` | Flamenca NPC sprites | `tools/gen-assets.mjs` |
 | `public/assets/sprites/vignette.png` | Warm evening vignette overlay | `tools/gen-assets.mjs` |
@@ -21,7 +22,7 @@ The tile index table shared by the art and map scripts is `tools/tileset-layout.
 
 | File | Made by |
 | --- | --- |
-| `public/assets/maps/feria.json`, `caseta.json`, `about.json` (Tiled 1.10 JSON) | `tools/gen-maps.mjs` |
+| `public/assets/maps/feria.json`, `caseta.json`, `about.json`, `action-detection.json`, `volunteer-pwa.json`, `secure-voting.json` (Tiled 1.10 JSON) | `tools/gen-maps.mjs` |
 
 ## Audio
 

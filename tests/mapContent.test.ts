@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import feria from '../public/assets/maps/feria.json';
 import { findMissingIds, projects } from '../src/content/projects';
 import { parseObjects } from '../src/systems/mapObjects';
+import { paginate } from '../src/systems/dialoguePager';
 import { TILE_SIZE } from '../src/config';
 
 type RawLayer = { name: string; type: string; data?: number[]; objects?: Parameters<typeof parseObjects>[0]['objects'] };
@@ -91,6 +92,20 @@ describe('feria.json', () => {
   it('keeps the middle of the avenue walkable from the street down to the portada', () => {
     const collision = layers.find((l) => l.name === 'collision')!.data!;
     for (let y = 7; y < 29; y++) for (const x of [19, 20]) expect(collision[y * feria.width + x], `${x},${y}`).toBe(0);
+  });
+
+  it('keeps every NPC line to three dialogue pages at most', () => {
+    // DialogueBox wraps at 28 characters and shows 3 lines per page.
+    for (const npc of objects.filter((o) => o.type === 'npc')) expect(paginate(npc.text ?? '', 28, 3).length, npc.id).toBeLessThanOrEqual(3);
+  });
+
+  it('has the flamenca point out the open CV casetas as well as the ones still being built', () => {
+    const text = objects.find((o) => o.type === 'npc' && o.id === 'flamenca')?.text ?? '';
+    expect(text).toMatch(/Caseta-musica/);
+    expect(text).toMatch(/town hall/i);
+    expect(text).toMatch(/football/i);
+    expect(text).toMatch(/volunteer/i);
+    expect(text).toMatch(/green ones are still being built/i);
   });
 
   it('has the portada spawn', () => {

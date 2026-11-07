@@ -251,7 +251,7 @@ function buildFeria() {
   m.block(21, 22);
   m.object('npc', 21, 22, {
     id: 'flamenca',
-    text: 'Hola! The red and white caseta up north is Caseta-musica, a jukebox for parties. The green ones are still being built, so come back soon. The post box by the gate is how to reach the author.',
+    text: "Hola! The red caseta up north is Caseta-musica, a party jukebox. The town hall, the football caseta and the volunteers' caseta are finished projects too, so step inside. The green ones are still being built.",
   });
 
   // Two more feriantes with tips and hints about what's coming.

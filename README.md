@@ -8,6 +8,9 @@ being built.
 ![The Caseta-musica caseta, a caseta under construction and the player on the albero street](docs/screenshot.jpg)
 
 - **Caseta-musica** (the red-and-white caseta): inside, the jukebox shows the project card.
+- **Secure Voting** (the navy town hall with the padlocked door): inside, the padlocked ballot box shows the card for a Django voting platform.
+- **Action Detection** (the football caseta with the GOAL scoreboard): inside, the big screen in the commentary booth shows the card for real-time football action detection with AI commentary.
+- **Volunteer PWA** (the orange and yellow volunteers' caseta): inside, the noticeboard of task cards shows the card for a volunteer coordination app.
 - **About me** (the whitewashed house): the bookshelf lists skills and the desk has my story.
 - **Contact** (the yellow post box by the gate): links to reach me.
 - **Green casetas behind caution tape**: projects in progress. They work as a visible roadmap and unlock
@@ -58,6 +61,8 @@ A building in the map only carries an `id`, so adding or unlocking a project nee
    links). Set `locked: true` with a `teaser` while it's in progress. Flip it to `false` to open it.
 3. **Optionally give it a room.** Set `interior` to a key of `src/content/interiors.ts` (or add a new room
    map there and in the generator). With `interior: null`, interacting shows the project card in place.
+   In a room, an object of type `exhibit` whose `id` is the project id shows its card (see the three CV
+   project rooms in `tools/gen-maps.mjs`).
 4. Run `npm test`. A map id with no project, or a project with no building, fails the build. In the game,
    an unknown id shows a visible warning instead of a dead door.
 
@@ -84,7 +89,7 @@ npx vite preview # http://localhost:4173/feria-portfolio/
 All art, maps and sound are original and generated in code with no dependencies beyond Node itself:
 
 ```sh
-node tools/gen-assets.mjs   # tilesets, sprites, vignette (PNG)
+node tools/gen-assets.mjs   # tilesets (feria, feria-custom, feria-projects), sprites, vignette (PNG)
 node tools/gen-maps.mjs     # overworld and interior maps (Tiled JSON)
 node tools/gen-audio.mjs    # ambient guitar loop and sound effects (WAV)
 ```
