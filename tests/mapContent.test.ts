@@ -148,8 +148,17 @@ describe('feria.json', () => {
       expect(at(decor, x, y), `${id} facade`).not.toBe(0);
       expect(at(collision, x, y + 1), `${id} approach`).toBe(0);
     }
-    const contact = building('contact').tile;
-    expect(at(collision, contact.x, contact.y + 1), 'contact approach').toBe(0);
+  });
+
+  it('puts the Contact post box and the welcome sign on the avenue edge, a few steps from the spawn', () => {
+    const dist = stepsFromSpawn();
+    const post = building('contact').tile;
+    const welcome = objects.find((o) => o.type === 'sign' && o.id === 'welcome-sign')!.tile;
+    // One tile off the walking path, with the avenue tile beside each one walkable and reachable.
+    expect(AVENUE_X, 'post box faces the avenue').toContain(post.x - 1);
+    expect(AVENUE_X, 'welcome sign faces the avenue').toContain(welcome.x + 1);
+    expect(stepsTo(dist, post.x, post.y), 'steps to the post box').toBeLessThanOrEqual(6);
+    expect(stepsTo(dist, welcome.x, welcome.y), 'steps to the welcome sign').toBeLessThanOrEqual(6);
   });
 
   it('draws the CV project casetas from feria-projects', () => {

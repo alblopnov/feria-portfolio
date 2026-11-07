@@ -3,7 +3,7 @@ import { TILE_SIZE } from '../config';
 import { projectCard } from '../content/projectText';
 import { getProject } from '../content/projects';
 import { entersOnWalkIn } from '../systems/doors';
-import { playDoorOpen } from '../systems/DoorAnimation';
+import { playDoorExit, playDoorOpen } from '../systems/DoorAnimation';
 import { doorTiming, prefersReducedMotion } from '../systems/doorTiming';
 import type { Direction, Tile } from '../systems/gridMovement';
 import type { MapObject } from '../systems/mapObjects';
@@ -14,13 +14,15 @@ import type { InteriorData } from './InteriorScene';
 /** Number of NPC looks (rows) in npc.png, drawn by tools/gen-assets.mjs. */
 const NPC_LOOKS = 3;
 
-export type WorldData ={ spawnTile?: Tile; facing?: Direction };
+/** doorTile: the door the player just left a room through, so it can swing shut behind them. */
+export type WorldData = { spawnTile?: Tile; facing?: Direction; doorTile?: Tile };
 
 export class WorldScene extends GridScene {
   private spawnOverride: Tile | null = null;
   /** Set once a walk-in door has started the Interior scene, so one bump cannot start it twice. */
   private entering = false;
   private map!: Phaser.Tilemaps.Tilemap;
+  private exitDoor: Tile | null = null;
   private npcs = new Map<MapObject, { sprite: Phaser.GameObjects.Sprite; look: number }>();
 
   constructor() {
@@ -30,6 +32,7 @@ export class WorldScene extends GridScene {
   init(data: WorldData): void {
     this.resetInput(data?.facing ?? 'up');
     this.spawnOverride = data?.spawnTile ?? null;
+    this.exitDoor = data?.doorTile ?? null;
     this.entering = false;
   }
 
@@ -54,6 +57,12 @@ export class WorldScene extends GridScene {
     cam.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     cam.startFollow(this.player, true);
     cam.setRoundPixels(true);
+
+    if (this.exitDoor && this.spawnOverride) {
+      // Coming out of a room: the player walks out of the open doorway and the door swings shut.
+      this.inputLocked = true;
+      playDoorExit(this, map, this.exitDoor, this.spawnOverride, this.player, doorTiming(prefersReducedMotion()), () => (this.inputLocked = false));
+    }
   }
 
   protected onBump(obj: MapObject | undefined): void {
@@ -91,7 +100,7 @@ export class WorldScene extends GridScene {
     if (project.locked) {
       this.dialogue.show(project.teaser);
     } else if (project.interior) {
-      const data: InteriorData = { interiorId: project.interior, returnTile: { ...this.pos } };
+      const data: InteriorData = { interiorId: project.interior, returnTile: { ...this.pos }, doorTile: { ...obj.tile } };
       this.openDoorThen(obj, () => this.scene.start('Interior', data));
     } else {
       // Unlocked with no room, like the Contact post box: show its card right here.

@@ -1,17 +1,20 @@
+import Phaser from 'phaser';
 import { interiors } from '../content/interiors';
 import { projectCard, skillsText } from '../content/projectText';
 import type { Tile } from '../systems/gridMovement';
 import type { MapObject } from '../systems/mapObjects';
+import { doorTiming, prefersReducedMotion } from '../systems/doorTiming';
 import { playSfx } from '../systems/sound';
 import { GridScene } from './GridScene';
 import type { WorldData } from './WorldScene';
 
-export type InteriorData = { interiorId: string; returnTile: Tile };
+export type InteriorData = { interiorId: string; returnTile: Tile; doorTile?: Tile };
 
 /** One reusable room scene, built from whichever interior map the project points at. */
 export class InteriorScene extends GridScene {
   private interiorId = '';
   private returnTile: Tile = { x: 0, y: 0 };
+  private doorTile: Tile | undefined;
   private leaving = false;
 
   constructor() {
@@ -22,6 +25,7 @@ export class InteriorScene extends GridScene {
     this.resetInput('up');
     this.interiorId = data.interiorId;
     this.returnTile = data.returnTile;
+    this.doorTile = data.doorTile;
     this.leaving = false;
   }
 
@@ -29,7 +33,7 @@ export class InteriorScene extends GridScene {
     const entry = interiors[this.interiorId];
     if (!entry || !this.cache.tilemap.exists(entry.mapKey)) {
       console.warn(`No interior map for ${JSON.stringify(this.interiorId)}; returning to the feria`);
-      this.leave();
+      this.leave(false);
       return;
     }
     const map = this.buildMap(entry.mapKey);
@@ -58,11 +62,20 @@ export class InteriorScene extends GridScene {
     else this.showWithLinks(projectCard(project), project);
   }
 
-  private leave(): void {
+  /** Steps out: the room fades to black, then the world starts with the player walking out of the door. */
+  private leave(animate = true): void {
     if (this.leaving) return;
     this.leaving = true;
+    this.inputLocked = true;
     playSfx(this.game, 'door', { volume: 0.5 });
-    const data: WorldData = { spawnTile: this.returnTile, facing: 'down' };
-    this.scene.start('World', data);
+    const data: WorldData = { spawnTile: this.returnTile, facing: 'down', doorTile: this.doorTile };
+    const go = () => this.scene.start('World', data);
+    if (!animate) {
+      go();
+      return;
+    }
+    const cam = this.cameras.main;
+    cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, go);
+    cam.fadeOut(doorTiming(prefersReducedMotion()).leave, 0, 0, 0);
   }
 }

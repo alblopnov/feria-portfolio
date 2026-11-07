@@ -12,7 +12,7 @@ being built.
 - **Action Detection** (the football caseta with the GOAL scoreboard): inside, the big screen in the commentary booth shows the card for real-time football action detection with AI commentary.
 - **Volunteer PWA** (the orange and yellow volunteers' caseta): inside, the noticeboard of task cards shows the card for a volunteer coordination app.
 - **About me** (the whitewashed house): the bookshelf lists skills and the desk has my story.
-- **Contact** (the yellow post box by the gate): links to reach me.
+- **Contact** (the yellow post box on the avenue, just inside the gate): links to reach me.
 - **Green casetas behind caution tape**: projects in progress. They work as a visible roadmap and unlock
   when each project ships.
 
