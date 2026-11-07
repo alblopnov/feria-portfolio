@@ -2,6 +2,7 @@ import { interiors } from '../content/interiors';
 import { projectCard, skillsText } from '../content/projectText';
 import type { Tile } from '../systems/gridMovement';
 import type { MapObject } from '../systems/mapObjects';
+import { playSfx } from '../systems/sound';
 import { GridScene } from './GridScene';
 import type { WorldData } from './WorldScene';
 
@@ -60,6 +61,7 @@ export class InteriorScene extends GridScene {
   private leave(): void {
     if (this.leaving) return;
     this.leaving = true;
+    playSfx(this.game, 'door', { volume: 0.5 });
     const data: WorldData = { spawnTile: this.returnTile, facing: 'down' };
     this.scene.start('World', data);
   }

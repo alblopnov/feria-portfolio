@@ -3,7 +3,8 @@ import { TILE_SIZE } from '../config';
 import { projectCard } from '../content/projectText';
 import type { Direction, Tile } from '../systems/gridMovement';
 import type { MapObject } from '../systems/mapObjects';
-import { FRAME_ROW, GridScene, OPPOSITE } from './GridScene';
+import { playSfx } from '../systems/sound';
+import { DEPTH, FRAME_ROW, GridScene, OPPOSITE } from './GridScene';
 import type { InteriorData } from './InteriorScene';
 
 export type WorldData = { spawnTile?: Tile; facing?: Direction };
@@ -26,7 +27,7 @@ export class WorldScene extends GridScene {
 
     this.npcs.clear();
     for (const npc of this.objects.filter((o) => o.type === 'npc')) {
-      this.npcs.set(npc, this.add.sprite(npc.tile.x * TILE_SIZE, npc.tile.y * TILE_SIZE, 'npc', FRAME_ROW.down).setOrigin(0, 0).setDepth(9));
+      this.npcs.set(npc, this.add.sprite(npc.tile.x * TILE_SIZE, npc.tile.y * TILE_SIZE, 'npc', FRAME_ROW.down).setOrigin(0, 0).setDepth(DEPTH.npc));
     }
 
     const spawn = this.objects.find((o) => o.type === 'spawn' && o.id === 'portada') ?? this.objects.find((o) => o.type === 'spawn');
@@ -54,6 +55,7 @@ export class WorldScene extends GridScene {
       this.dialogue.show(project.teaser);
     } else if (project.interior) {
       const data: InteriorData = { interiorId: project.interior, returnTile: { ...this.pos } };
+      playSfx(this.game, 'door', { volume: 0.5 });
       this.scene.start('Interior', data);
     } else {
       // Unlocked with no room, like the Contact post box: show its card right here.

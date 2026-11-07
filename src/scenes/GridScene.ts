@@ -6,6 +6,7 @@ import { DialogueBox } from '../systems/DialogueBox';
 import { canMove, resolveDirection, step, type Direction, type Tile } from '../systems/gridMovement';
 import { facingTile, findInteractable } from '../systems/interaction';
 import { parseObjects, type MapObject } from '../systems/mapObjects';
+import { audioGate, isMuted, playSfx, toggleMute } from '../systems/sound';
 
 const KEY_DIRS: Record<string, Direction> = {
   ArrowUp: 'up',
@@ -21,6 +22,11 @@ const INTERACT_KEYS = new Set(['KeyZ', 'Enter', 'NumpadEnter']);
 export const OPPOSITE: Record<Direction, Direction> = { up: 'down', down: 'up', left: 'right', right: 'left' };
 export const FRAME_ROW: Record<Direction, number> = { down: 0, left: 1, right: 2, up: 3 };
 const STEP_MS = 160;
+/** Texture key for each tileset name used in the Tiled maps (loaded by BootScene). */
+const TILESET_TEXTURES: Record<string, string> = { feria: 'tiles', 'feria-custom': 'tiles-custom' };
+/** HUD icon frames in the tiles-custom spritesheet (CT.SOUND_ON / CT.SOUND_OFF in tools/tileset-layout.mjs). */
+const SOUND_FRAMES = { on: 31, off: 47 };
+export const DEPTH = { npc: 9, player: 10, overhead: 20, vignette: 50, warning: 100, hud: 1100 };
 /** Object types whose `id` must name a project in projects.ts. */
 const PROJECT_TYPES: ReadonlySet<MapObject['type']> = new Set(['building', 'door', 'jukebox', 'bookshelf', 'desk']);
 
@@ -59,11 +65,17 @@ export abstract class GridScene extends Phaser.Scene {
   /** Builds the map layers and parses its objects; returns the tilemap. */
   protected buildMap(key: string): Phaser.Tilemaps.Tilemap {
     const map = this.make.tilemap({ key });
-    const tileset = map.addTilesetImage('feria', 'tiles');
-    if (!tileset) throw new Error(`tileset missing in ${key}`);
-    map.createLayer('ground', tileset, 0, 0);
-    map.createLayer('decor', tileset, 0, 0);
-    const collision = map.createLayer('collision', tileset, 0, 0);
+    const tilesets = map.tilesets.map((ts) => {
+      const texture = TILESET_TEXTURES[ts.name];
+      const added = texture ? map.addTilesetImage(ts.name, texture) : null;
+      if (!added) throw new Error(`tileset ${ts.name} missing in ${key}`);
+      return added;
+    });
+    map.createLayer('ground', tilesets, 0, 0);
+    map.createLayer('decor', tilesets, 0, 0);
+    // Bunting and garlands hang over the street, so they draw above the player.
+    if (map.getLayerIndex('overhead') !== null) map.createLayer('overhead', tilesets, 0, 0)?.setDepth(DEPTH.overhead);
+    const collision = map.createLayer('collision', tilesets, 0, 0);
     if (!collision) throw new Error(`collision layer missing in ${key}`);
     this.collision = collision.setVisible(false);
     this.bounds = { width: map.width, height: map.height };
@@ -78,10 +90,33 @@ export abstract class GridScene extends Phaser.Scene {
   protected spawnPlayer(tile: Tile): void {
     this.pos = { ...tile };
     ensurePlayerAnims(this);
-    this.player = this.add.sprite(tile.x * TILE_SIZE, tile.y * TILE_SIZE, 'player', FRAME_ROW[this.facing] * 3).setOrigin(0, 0).setDepth(10);
-    this.dialogue = new DialogueBox(this);
+    this.player = this.add.sprite(tile.x * TILE_SIZE, tile.y * TILE_SIZE, 'player', FRAME_ROW[this.facing] * 3).setOrigin(0, 0).setDepth(DEPTH.player);
+    this.dialogue = new DialogueBox(this, () => playSfx(this.game, 'blip', { volume: 0.18 }));
+    this.add.image(0, 0, 'vignette').setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.vignette);
     this.setupKeyboard();
+    this.setupAudio();
     this.ready = true;
+  }
+
+  /** First key or pointer press unlocks audio (browser autoplay rules); the mute button is always on screen. */
+  private setupAudio(): void {
+    const unlock = () => audioGate(this.game).unlock();
+    this.input.keyboard?.on('keydown', unlock);
+    this.input.on('pointerdown', unlock);
+
+    const button = this.add
+      .image(GAME_WIDTH - 4, 4, 'tiles-custom', isMuted(this.game) ? SOUND_FRAMES.off : SOUND_FRAMES.on)
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setDepth(DEPTH.hud)
+      .setInteractive({ useHandCursor: true });
+    const toggle = () => button.setFrame(toggleMute(this.game) ? SOUND_FRAMES.off : SOUND_FRAMES.on);
+    button.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      unlock();
+      toggle();
+      event.stopPropagation(); // a tap on the button is not a tap on the touch controls
+    });
+    this.input.keyboard?.on('keydown-M', toggle);
   }
 
   /** Looks up a map object's project; an unknown id warns and shows a placeholder instead of crashing. */
@@ -116,6 +151,7 @@ export abstract class GridScene extends Phaser.Scene {
     const target = step(this.pos, dir);
     this.moving = true;
     this.player.anims.play(`player-walk-${dir}`, true);
+    playSfx(this.game, 'step', { volume: 0.22, detune: Phaser.Math.Between(-150, 150) });
     this.tweens.add({
       targets: this.player,
       x: target.x * TILE_SIZE,
@@ -178,7 +214,7 @@ export abstract class GridScene extends Phaser.Scene {
       .text(4, 4, `Missing project ids: ${list}`, { fontFamily: 'monospace', fontSize: '10px', color: '#ffdddd', backgroundColor: '#8f1f1c', wordWrap: { width: GAME_WIDTH - 8 } })
       .setResolution(4)
       .setScrollFactor(0)
-      .setDepth(100);
+      .setDepth(DEPTH.warning);
   }
 }
 

@@ -19,7 +19,11 @@ export class DialogueBox {
   private timer: Phaser.Time.TimerEvent | null = null;
   private open = false;
 
-  constructor(private readonly scene: Phaser.Scene) {
+  /** `onType` runs for every other typed letter (the typewriter blip). */
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly onType: () => void = () => {},
+  ) {
     const width = GAME_WIDTH - MARGIN * 2;
     const top = GAME_HEIGHT - HEIGHT - MARGIN;
     const frame = scene.add.graphics();
@@ -85,6 +89,7 @@ export class DialogueBox {
       callback: () => {
         this.shown++;
         this.label.setText(this.current().slice(0, this.shown));
+        if (this.shown % 2 === 1 && /\S/.test(this.current()[this.shown - 1] ?? '')) this.onType();
         if (!this.isTyping()) this.finishPage();
       },
     });

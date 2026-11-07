@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH, TILE_SIZE } from '../config';
 import { interiors } from '../content/interiors';
+import { AUDIO } from '../systems/sound';
 
 export const LOAD_ERROR_TEXT = "Couldn't load the feria, refresh";
 
@@ -18,14 +19,20 @@ export class BootScene extends Phaser.Scene {
       bar.width = barWidth * value;
     });
     this.load.on('loaderror', (file: Phaser.Loader.File) => {
-      this.failed.push(file.key);
+      // Audio is optional: the game runs silently without it.
+      if (file.type === 'audio') console.warn(`Audio ${file.key} failed to load; continuing without it`);
+      else this.failed.push(file.key);
     });
 
     this.load.image('tiles', 'assets/tilesets/feria.png');
+    // Loaded as a spritesheet so its HUD icons can be used as frames as well as map tiles.
+    this.load.spritesheet('tiles-custom', 'assets/tilesets/feria-custom.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    this.load.image('vignette', 'assets/sprites/vignette.png');
     this.load.spritesheet('player', 'assets/sprites/player.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     this.load.spritesheet('npc', 'assets/sprites/npc.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     this.load.tilemapTiledJSON('feria', 'assets/maps/feria.json');
     for (const { mapKey, mapFile } of Object.values(interiors)) this.load.tilemapTiledJSON(mapKey, mapFile);
+    for (const [key, file] of Object.entries(AUDIO)) this.load.audio(key, file);
   }
 
   create(): void {
@@ -33,7 +40,7 @@ export class BootScene extends Phaser.Scene {
     // loaderror event, so check the caches as well.
     const missing = [
       ...this.failed,
-      ...(['tiles', 'player', 'npc'] as const).filter((k) => !this.textures.exists(k)),
+      ...(['tiles', 'tiles-custom', 'vignette', 'player', 'npc'] as const).filter((k) => !this.textures.exists(k)),
       ...['feria', ...Object.values(interiors).map((i) => i.mapKey)].filter((k) => !this.cache.tilemap.exists(k)),
     ];
     if (missing.length > 0) {

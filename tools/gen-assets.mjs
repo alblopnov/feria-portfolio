@@ -1,10 +1,11 @@
-// Generates the placeholder pixel art (tileset + character sprites) as PNGs, with no dependencies.
+// Generates all of the game's pixel art (original, drawn in code) as PNGs, with no dependencies:
+// the base tileset, the feria-specific tileset (feria-custom.png), character sprites and the vignette.
 // Run: node tools/gen-assets.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
-import { COLUMNS, PIECES, ROWS, T, TILE } from './tileset-layout.mjs';
+import { COLUMNS, CPIECES, CT, CUSTOM_COLUMNS, CUSTOM_ROWS, PIECES, ROWS, T, TILE } from './tileset-layout.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -440,8 +441,8 @@ function deskBase(c) {
 }
 
 // ---------- Casetas ----------
-function caseta(piece, color, dark) {
-  const c = sheet.at(piece.col * TILE, piece.row * TILE);
+function caseta(canvas, piece, color, dark) {
+  const c = canvas.at(piece.col * TILE, piece.row * TILE);
   const W = piece.w * TILE;
   const H = piece.h * TILE;
   const mid = W / 2;
@@ -490,8 +491,8 @@ function caseta(piece, color, dark) {
   c.vline(W - 1, 6, H - 6, C.outline);
   c.hline(0, H - 1, W, C.outline);
 }
-caseta(PIECES.casetaRed, C.red, C.redDark);
-caseta(PIECES.casetaGreen, C.green, C.greenDark);
+caseta(sheet, PIECES.casetaRed, C.red, C.redDark);
+caseta(sheet, PIECES.casetaGreen, C.green, C.greenDark);
 
 // ---------- About house ----------
 {
@@ -566,6 +567,270 @@ caseta(PIECES.casetaGreen, C.green, C.greenDark);
   c.rect(42, 6, 12, 5, C.green);
   c.rect(44, 7, 8, 3, C.bulb);
 }
+
+// =====================================================================
+// feria-custom.png: the feria-specific pieces
+// =====================================================================
+const custom = new Canvas(CUSTOM_COLUMNS * TILE, CUSTOM_ROWS * TILE);
+const customTile = (index) => custom.at((index % CUSTOM_COLUMNS) * TILE, Math.floor(index / CUSTOM_COLUMNS) * TILE);
+const CLEAR = '#00000000';
+
+// A 3x5 pixel font for signs.
+const FONT = {
+  A: ['.#.', '#.#', '###', '#.#', '#.#'],
+  C: ['.##', '#..', '#..', '#..', '.##'],
+  D: ['##.', '#.#', '#.#', '#.#', '##.'],
+  E: ['###', '#..', '##.', '#..', '###'],
+  I: ['###', '.#.', '.#.', '.#.', '###'],
+  R: ['##.', '#.#', '##.', '#.#', '#.#'],
+  S: ['.##', '#..', '.#.', '..#', '##.'],
+  T: ['###', '.#.', '.#.', '.#.', '.#.'],
+};
+function text(c, x, y, str, color, glow) {
+  [...str].forEach((ch, i) => {
+    const glyph = FONT[ch];
+    glyph.forEach((row, j) =>
+      [...row].forEach((p, k) => {
+        if (p !== '#') return;
+        if (glow) for (const [gx, gy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) c.px(x + i * 4 + k + gx, y + j + gy, glow);
+      }),
+    );
+  });
+  [...str].forEach((ch, i) => FONT[ch].forEach((row, j) => [...row].forEach((p, k) => p === '#' && c.px(x + i * 4 + k, y + j, color))));
+}
+
+const WARM = { deep: '#6a3a18', mid: '#c87a2c', light: '#f0b04a', hot: '#ffe08a' };
+
+// ---------- Caseta-musica: a Seville feria caseta (7x5 tiles, entrance in local column 3) ----------
+{
+  const p = CPIECES.casetaMusica;
+  const c = custom.at(p.col * TILE, p.row * TILE);
+  const W = p.w * TILE;
+  const H = p.h * TILE;
+  const mid = W / 2;
+  const stripe = (x) => (Math.floor(x / 7) % 2 === 0 ? C.red : C.white);
+  const stripeShade = (x) => (Math.floor(x / 7) % 2 === 0 ? C.redDark : C.whiteShade);
+  const BASE = 31; // bottom of the pediment
+  const topAt = (x) => 3 + Math.round((Math.abs(x - mid + 0.5) * (BASE - 5)) / mid);
+
+  // Pediment (frontis) in striped lona, edged with a white fringe and light bulbs.
+  for (let x = 0; x < W; x++) {
+    const top = topAt(x);
+    c.vline(x, top, BASE - top, stripe(x));
+    c.px(x, top, C.outline);
+    c.px(x, top + 1, C.white);
+    c.px(x, top + 2, C.white);
+    if (x % 4 === 0) c.px(x, top + 1, C.bulb);
+    if (x % 6 === 3) c.px(x, top + 3, C.red);
+  }
+  c.rect(mid - 1, 0, 2, 3, C.outline); // finial
+  c.px(mid - 1, 0, C.bulb);
+  c.px(mid, 0, C.bulb);
+
+  // Lit name board: "CASETA" in bulb letters.
+  const bx = mid - 16;
+  c.rect(bx, 12, 32, 12, C.outline);
+  c.rect(bx + 1, 13, 30, 10, '#4a0e10');
+  for (let x = bx + 1; x < bx + 31; x += 2) c.px(x, 13, x % 4 === 1 ? C.bulb : C.white), c.px(x, 22, x % 4 === 1 ? C.white : C.bulb);
+  text(c, mid - 11, 15, 'CASETA', C.bulb, '#9a4a1c');
+
+  // Beam and scalloped valance (the "volante").
+  c.rect(0, BASE, W, 3, C.redDark);
+  c.hline(0, BASE, W, C.outline);
+  c.hline(0, BASE + 1, W, C.red);
+  for (let x = 0; x < W; x++) {
+    const d = Math.abs((x % 8) - 3.5);
+    const depth = d < 1.5 ? 5 : d < 2.5 ? 4 : d < 3.5 ? 3 : 2;
+    c.vline(x, BASE + 3, depth, C.white);
+    c.px(x, BASE + 3 + depth, C.red);
+  }
+
+  // Side panels: striped lona above, a white railing in front of the lit interior below.
+  const DOOR = 3 * TILE;
+  for (let x = 0; x < W; x++) {
+    if (x >= DOOR - 2 && x < DOOR + TILE + 2) continue;
+    c.vline(x, BASE + 8, 52 - BASE - 8, stripe(x));
+    c.px(x, BASE + 8, stripeShade(x));
+    // Warm interior behind the railing, brighter towards the middle.
+    const warmth = 1 - Math.abs(x - mid) / mid;
+    c.vline(x, 52, 22, warmth > 0.55 ? WARM.mid : WARM.deep);
+    c.vline(x, 54, 4, warmth > 0.4 ? WARM.light : WARM.mid);
+  }
+  // Farolillo strings across each side panel.
+  const lanternColors = [C.green, C.yellow, C.white, C.green, C.yellow];
+  for (const [x0, x1] of [[2, DOOR - 4], [DOOR + TILE + 4, W - 2]]) {
+    for (let x = x0; x <= x1; x++) c.px(x, 41 + Math.round(Math.sin(((x - x0) / (x1 - x0)) * Math.PI) * 3), C.outline);
+    for (let i = 0; i < 4; i++) {
+      const lx = x0 + 3 + Math.round((i * (x1 - x0 - 8)) / 3);
+      const ly = 42 + Math.round(Math.sin(((lx - x0) / (x1 - x0)) * Math.PI) * 3);
+      farolillo(c, lx, ly, lanternColors[(i + (x0 > mid ? 2 : 0)) % lanternColors.length]);
+    }
+  }
+  // Railing (barandilla).
+  c.rect(0, 58, W, 2, C.white);
+  c.hline(0, 60, W, C.whiteShade);
+  for (let x = 1; x < W; x += 4) c.rect(x, 60, 2, 12, C.white), c.vline(x + 1, 60, 12, C.whiteShade);
+  c.rect(0, 72, W, 8, C.red);
+  for (let x = 0; x < W; x += 7) c.vline(x, 72, 8, Math.floor(x / 7) % 2 ? C.white : C.red);
+  c.hline(0, 72, W, C.redDark);
+
+  // The entrance: warm light spilling out, a lantern inside, curtains tied back.
+  for (let y = BASE + 8; y < H; y++) {
+    const t = (y - BASE - 8) / (H - BASE - 8);
+    const col = t < 0.25 ? WARM.mid : t < 0.55 ? WARM.light : WARM.hot;
+    c.hline(DOOR, y, TILE, col);
+  }
+  for (let y = 62; y < H; y += 5) c.hline(DOOR + 1, y, TILE - 2, WARM.light);
+  c.vline(mid, BASE + 8, 4, C.outline);
+  farolillo(c, mid - 2, BASE + 12, C.red);
+  // Silhouettes of a couple dancing sevillanas inside.
+  for (const [sx, flip] of [[DOOR + 3, false], [DOOR + 9, true]]) {
+    c.sprite(sx, 58, ['.#.', '###', '.#.', '###', '#.#', '#.#'], { '#': '#5a2a10' }, flip);
+  }
+  for (let j = 0; j < 22; j++) {
+    const w = Math.max(1, 5 - Math.floor(j / 5));
+    c.hline(DOOR - 2, BASE + 8 + j, w, j % 6 === 5 ? C.white : C.red);
+    c.hline(DOOR + TILE + 2 - w, BASE + 8 + j, w, j % 6 === 5 ? C.white : C.red);
+  }
+  c.hline(DOOR - 3, BASE + 7, TILE + 6, C.redDark);
+
+  // Corner poles with bulbs, and the outline.
+  for (const x of [0, W - 2]) {
+    c.rect(x, BASE, 2, H - BASE, C.white);
+    for (let y = BASE + 2; y < H; y += 4) c.px(x + (x ? 0 : 1), y, C.bulb);
+  }
+  c.vline(0, BASE, H - BASE, C.outline);
+  c.vline(W - 1, BASE, H - BASE, C.outline);
+  c.hline(0, H - 1, W, C.outline);
+}
+
+// ---------- A locked caseta still being built (5x4 tiles, door in local column 2) ----------
+{
+  const p = CPIECES.casetaObras;
+  caseta(custom, p, C.green, C.greenDark);
+  const c = custom.at(p.col * TILE, p.row * TILE);
+  const W = p.w * TILE;
+  // The right part has no lona yet: erase it and show the bare frame with scaffolding.
+  for (let x = 46; x < W; x++) for (let y = 0; y < 46; y++) c.px(x, y, CLEAR);
+  const steel = '#7d8590';
+  const steelDark = '#4e555e';
+  for (const x of [46, 62, W - 2]) c.rect(x, 4, 2, 42, steel), c.vline(x + 1, 4, 42, steelDark);
+  for (const y of [6, 22, 38]) c.rect(46, y, W - 46, 2, steel), c.hline(46, y + 1, W - 46, steelDark);
+  for (let i = 0; i < 16; i++) c.px(47 + i, 22 + i, steelDark), c.px(63 + i, 22 - i, steelDark);
+  c.rect(44, 37, W - 44, 3, C.woodLight); // plank
+  c.hline(44, 40, W - 44, C.woodDark);
+  // A loose roll of lona hanging off the frame.
+  c.rect(40, 6, 6, 40, C.white);
+  for (let y = 6; y < 46; y += 5) c.hline(40, y, 6, C.green);
+  c.vline(45, 6, 40, C.whiteShade);
+  // Caution tape across the door.
+  const dx = 2 * TILE;
+  for (let i = -2; i < 18; i++) {
+    for (const [ox, oy, dir] of [[dx, 38, 1], [dx + 15, 38, -1]]) {
+      const x = ox + i * dir;
+      const y = oy + i;
+      const band = Math.floor((i + 2) / 3) % 2 ? C.outline : C.yellow;
+      for (let t = 0; t < 4; t++) c.px(x, y + t, band);
+    }
+  }
+  c.rect(0, 50, W, 3, C.yellow);
+  for (let x = 0; x < W; x += 6) c.rect(x, 50, 3, 3, C.outline);
+}
+
+// ---------- Credits sign (2x1 tiles) ----------
+{
+  const p = CPIECES.creditsSign;
+  const c = custom.at(p.col * TILE, p.row * TILE);
+  c.rect(5, 11, 2, 5, C.woodDark);
+  c.rect(25, 11, 2, 5, C.woodDark);
+  c.rect(0, 1, 32, 11, C.outline);
+  c.rect(1, 2, 30, 9, '#1f3f6e');
+  c.hline(1, 2, 30, '#2f5fa8');
+  text(c, 3, 4, 'CREDITS', C.white);
+}
+
+// ---------- Single tiles ----------
+{
+  // Under-construction sign: yellow diamond on a post over a striped barrier.
+  const c = customTile(CT.OBRAS_SIGN);
+  c.rect(7, 8, 2, 8, '#4a4a4a');
+  for (let j = 0; j < 9; j++) {
+    const half = j < 5 ? j : 8 - j;
+    c.hline(8 - half - 1, j, half * 2 + 2, C.outline);
+    if (half > 0) c.hline(8 - half, j, half * 2, C.yellow);
+  }
+  c.vline(7, 2, 3, C.outline), c.vline(8, 2, 3, C.outline);
+  c.rect(7, 6, 2, 1, C.outline);
+  c.rect(1, 10, 14, 3, C.white);
+  for (let x = 1; x < 15; x += 4) c.rect(x, 10, 2, 3, C.red);
+  c.rect(2, 13, 1, 3, '#4a4a4a');
+  c.rect(13, 13, 1, 3, '#4a4a4a');
+}
+{
+  const c = customTile(CT.CONE);
+  c.rect(3, 13, 10, 2, '#e05a1c');
+  c.hline(3, 15, 10, '#00000044');
+  for (let j = 0; j < 10; j++) {
+    const w = 2 + Math.floor(j / 2) * 1;
+    c.hline(8 - w / 2, 3 + j, w, j > 3 && j < 6 ? C.white : '#f07028');
+  }
+}
+{
+  // Warm light from the caseta entrance falling on the albero; edges match the plain albero tile.
+  const c = customTile(CT.GLOW);
+  const r = rng(11);
+  c.rect(0, 0, 16, 16, C.albero);
+  for (let i = 0; i < 22; i++) c.px(r() * 16, r() * 16, r() < 0.6 ? C.alberoLight : C.alberoDark);
+  for (let y = 0; y < 16; y++)
+    for (let x = 0; x < 16; x++) {
+      const d = Math.hypot((x - 7.5) / 8, y / 14);
+      if (d < 0.45) c.px(x, y, '#f0c878');
+      else if (d < 0.7) c.px(x, y, (x + y) % 2 ? '#f0c878' : C.alberoLight);
+      else if (d < 0.9 && (x + y) % 2) c.px(x, y, C.alberoLight);
+    }
+}
+{
+  // Overhead farolillo string (tiles horizontally; the string meets the edges at y = 1).
+  const c = customTile(CT.GARLAND);
+  for (let x = 0; x < 16; x++) c.px(x, 1 + Math.round(Math.sin((x / 16) * Math.PI) * 2), C.outline);
+  farolillo(c, 1, 3, C.red);
+  farolillo(c, 6, 4, C.yellow);
+  farolillo(c, 11, 3, C.green);
+}
+{
+  const c = customTile(CT.PENNANTS);
+  c.hline(0, 1, 16, C.outline);
+  const colors = [C.red, C.yellow, C.green, C.white];
+  colors.forEach((col, i) => {
+    for (let j = 0; j < 4; j++) c.hline(i * 4 + Math.floor(j / 2), 2 + j, 4 - Math.floor(j / 2) * 2, col);
+  });
+}
+function speaker(c, on) {
+  c.rect(0, 0, 16, 16, '#2e1d12cc');
+  c.rect(3, 6, 3, 4, C.white);
+  for (let j = 0; j < 5; j++) c.vline(6 + j, 6 - j, 4 + j * 2, C.white);
+  if (on) {
+    c.vline(12, 6, 4, C.bulb);
+    c.vline(14, 4, 8, C.bulb);
+  } else {
+    for (let i = 0; i < 4; i++) c.px(11 + i, 6 + i, C.red), c.px(14 - i, 6 + i, C.red);
+  }
+}
+speaker(customTile(CT.SOUND_ON), true);
+speaker(customTile(CT.SOUND_OFF), false);
+
+// ---------- Evening vignette (screen overlay) ----------
+const vignette = new Canvas(320, 240);
+for (let y = 0; y < 240; y++)
+  for (let x = 0; x < 320; x++) {
+    const d = Math.hypot((x - 159.5) / 160, (y - 119.5) / 120) / Math.SQRT2;
+    const v = Math.max(0, (d - 0.35) / 0.65) ** 1.6;
+    const r = Math.round(255 - v * 215);
+    const g = Math.round(150 - v * 128);
+    const b = Math.round(60 - v * 50);
+    const a = Math.round((0.05 + v * 0.4) * 255);
+    vignette.px(x, y, '#' + [r, g, b, a].map((n) => n.toString(16).padStart(2, '0')).join(''));
+  }
 
 // ---------- Characters ----------
 const PLAYER_PAL = {
@@ -658,5 +923,7 @@ function save(rel, canvas) {
   console.log('wrote', rel);
 }
 save('public/assets/tilesets/feria.png', sheet);
+save('public/assets/tilesets/feria-custom.png', custom);
+save('public/assets/sprites/vignette.png', vignette);
 save('public/assets/sprites/player.png', player);
 save('public/assets/sprites/npc.png', npc);

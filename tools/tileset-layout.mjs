@@ -50,5 +50,30 @@ export const PIECES = {
 
 /** Local tile index of tile (cx, cy) inside a piece. */
 export function pieceTile(piece, cx, cy) {
-  return (piece.row + cy) * COLUMNS + piece.col + cx;
+  return piece.offset + (piece.row + cy) * COLUMNS + piece.col + cx;
 }
+for (const p of Object.values(PIECES)) p.offset = 0;
+
+// ---------- Second tileset: feria-custom.png (feria-specific pieces) ----------
+// In the maps it follows the base tileset (firstgid = base tilecount + 1), so map builders address its
+// tiles as CUSTOM_OFFSET + local index.
+export const CUSTOM_COLUMNS = 16;
+export const CUSTOM_ROWS = 8;
+export const CUSTOM_OFFSET = COLUMNS * ROWS;
+
+/** Local indices inside feria-custom.png (add CUSTOM_OFFSET when placing them in a map). */
+export const CT = {
+  OBRAS_SIGN: 14,
+  CONE: 15,
+  GLOW: 28, // albero lit by the caseta entrance
+  GARLAND: 29, // overhead string of farolillos
+  PENNANTS: 30, // overhead bunting
+  SOUND_ON: 31, // HUD icons (also loaded as spritesheet frames)
+  SOUND_OFF: 47,
+};
+
+export const CPIECES = {
+  casetaMusica: { col: 0, row: 0, w: 7, h: 5, offset: CUSTOM_OFFSET },
+  casetaObras: { col: 7, row: 0, w: 5, h: 4, offset: CUSTOM_OFFSET },
+  creditsSign: { col: 12, row: 0, w: 2, h: 1, offset: CUSTOM_OFFSET },
+};
