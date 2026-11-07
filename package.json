@@ -1,0 +1,19 @@
+{
+  "name": "feria-portfolio",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build"
+  },
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^6.4.5",
+    "vitest": "^4.1.12"
+  }
+}
