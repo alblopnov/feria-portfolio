@@ -28,7 +28,7 @@ export const projects: Record<string, Project> = {
     title: 'About me',
     summary:
       'Hi, I am Alberto López-Benjumea, a Software Engineer II in Dublin, Ireland. I build full-stack tools with .NET, React and Python, from compliance dashboards to API integrations. I studied Software Engineering at the University of Seville, and this feria is my portfolio: each caseta is a project.',
-    tech: ['Python', 'TypeScript', 'JavaScript', 'C# (.NET)', 'Java', 'SQL', 'React', 'FastAPI', 'Django', 'Flask', 'PyTorch', 'OpenAI API', 'AWS', 'Docker', 'Kubernetes', 'CI/CD'],
+    tech: ['Python', 'TypeScript', 'JavaScript', 'C# (.NET)', 'Java', 'SQL', 'React', 'FastAPI', 'Django', 'Flask', 'PyTorch', 'AWS', 'Docker', 'CI/CD'],
     links: [{ label: 'GitHub profile', url: GITHUB }],
     locked: false,
     teaser: '',
