@@ -20,6 +20,14 @@ being built.
 | Walk | Arrow keys or WASD | Drag the virtual stick (bottom left) |
 | Talk, read, enter, next page | Z or Enter | A button |
 | Mute / unmute | M | Speaker button (top right) |
+| Hide or show the controls help | H | "? Controls" button (top left) |
+
+A controls cheat sheet sits in the top-left corner. It folds into a small "? Controls" button after your
+first step (or ten seconds), and the button or the H key brings it back.
+
+Everything you can use is marked: a bobbing arrow floats over doors, signs, people and furniture, each
+building has a name tag ("(soon)" for the ones still being built), and when you face something a bubble
+tells you what the button does, for example "Z · Enter Caseta-musica".
 
 Sound starts after your first key press or tap, because browsers block autoplay.
 
