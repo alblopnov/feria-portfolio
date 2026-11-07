@@ -36,6 +36,12 @@ describe('author content', () => {
     expect(projects['secure-voting'].links).toEqual([]);
   });
 
+  it('has the Contact card give the name before saying where the author is based', () => {
+    const text = projects.contact.summary;
+    expect(text).toContain('Alberto López-Benjumea');
+    expect(text.indexOf('Alberto López-Benjumea')).toBeLessThan(text.indexOf('Dublin'));
+  });
+
   it('does not publish a phone number or name an employer', () => {
     const all = JSON.stringify(projects);
     expect(all).not.toMatch(/\+\d{2}\s?\d{2}/);

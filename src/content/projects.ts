@@ -37,7 +37,7 @@ export const projects: Record<string, Project> = {
   contact: {
     id: 'contact',
     title: 'Contact',
-    summary: 'Say hello! I am based in Dublin, Ireland, and the best way to reach me is by email: a.lopezbenjumea@gmail.com.',
+    summary: 'Say hello! I am Alberto López-Benjumea, and I am based in Dublin, Ireland. The best way to reach me is by email: a.lopezbenjumea@gmail.com.',
     tech: [],
     links: [
       { label: 'Email me', url: 'mailto:a.lopezbenjumea@gmail.com' },
