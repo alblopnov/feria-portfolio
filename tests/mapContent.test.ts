@@ -35,6 +35,43 @@ describe('feria.json', () => {
     }
   });
 
+  it('has at least three NPCs, each with its own non-empty text', () => {
+    const npcs = objects.filter((o) => o.type === 'npc');
+    expect(npcs.length).toBeGreaterThanOrEqual(3);
+    for (const npc of npcs) expect((npc.text ?? '').trim().length, npc.id).toBeGreaterThan(0);
+    expect(new Set(npcs.map((n) => n.text)).size).toBe(npcs.length);
+  });
+
+  it('has a distant fairground attraction drawn from feria-custom tiles, behind collision', () => {
+    const noria = objects.find((o) => o.type === 'sign' && o.id === 'noria');
+    expect(noria).toBeDefined();
+    const at = (name: string) => layers.find((l) => l.name === name)!.data![noria!.tile.y * feria.width + noria!.tile.x];
+    expect(at('collision')).not.toBe(0);
+    expect(at('decor')).toBeGreaterThanOrEqual(feria.tilesets[1].firstgid);
+  });
+
+  it('keeps every building, NPC and sign reachable on foot from the portada', () => {
+    const blocked = layers.find((l) => l.name === 'collision')!.data!;
+    const key = (x: number, y: number) => y * feria.width + x;
+    const spawn = objects.find((o) => o.type === 'spawn' && o.id === 'portada')!.tile;
+    const seen = new Set([key(spawn.x, spawn.y)]);
+    const queue = [spawn];
+    while (queue.length > 0) {
+      const { x, y } = queue.shift()!;
+      for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+        if (nx < 0 || ny < 0 || nx >= feria.width || ny >= feria.height) continue;
+        if (blocked[key(nx, ny)] !== 0 || seen.has(key(nx, ny))) continue;
+        seen.add(key(nx, ny));
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    for (const o of objects.filter((o) => ['building', 'door', 'npc', 'sign'].includes(o.type))) {
+      const { x, y } = o.tile;
+      const reachable = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].some(([nx, ny]) => seen.has(key(nx, ny)));
+      expect(reachable, `${o.type} ${o.id} at ${x},${y}`).toBe(true);
+    }
+  });
+
   it('has the portada spawn', () => {
     expect(objects.some((o) => o.type === 'spawn' && o.id === 'portada')).toBe(true);
   });

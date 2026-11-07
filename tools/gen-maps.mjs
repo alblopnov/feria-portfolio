@@ -231,6 +231,25 @@ function buildFeria() {
     text: 'Hola! The red and white caseta up north is Caseta-musica, a jukebox for parties. The green ones are still being built, so come back soon. The post box by the gate is how to reach the author.',
   });
 
+  // Two more feriantes with tips and hints about what's coming.
+  m.block(8, 9);
+  m.object('npc', 8, 9, {
+    id: 'feriante',
+    text: "Those green casetas behind the tape? One will be an ML classifier, one a Java service, and the far one a dashboard for everything running in Docker. They open when they're ready.",
+  });
+  m.block(30, 20);
+  m.object('npc', 30, 20, {
+    id: 'senor',
+    text: 'Explore everything: walk up to doors, signs and people and press Z (or tap A). The blue-tiled house is the author\'s, the jukebox in the red caseta tells its story, and the post box by the gate has the contact links.',
+  });
+
+  // A small noria (ferris wheel) at the far end of the ground: decorative, fenced off by collision.
+  m.piece(CPIECES.noria, 32, 21);
+  m.object('sign', 34, 24, {
+    id: 'noria',
+    text: 'La noria. It is closed tonight, but it looks lovely from down here.',
+  });
+
   // Flower pots along the bottom fence, leaving the portada clear.
   for (let x = 2; x < 38; x += 3) if (x < 16 || x > 23) m.prop(x, 28, T.POT);
 

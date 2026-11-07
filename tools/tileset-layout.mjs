@@ -76,4 +76,5 @@ export const CPIECES = {
   casetaMusica: { col: 0, row: 0, w: 7, h: 5, offset: CUSTOM_OFFSET },
   casetaObras: { col: 7, row: 0, w: 5, h: 4, offset: CUSTOM_OFFSET },
   creditsSign: { col: 12, row: 0, w: 2, h: 1, offset: CUSTOM_OFFSET },
+  noria: { col: 7, row: 4, w: 5, h: 4, offset: CUSTOM_OFFSET }, // distant ferris wheel
 };

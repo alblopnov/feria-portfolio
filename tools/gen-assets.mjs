@@ -819,6 +819,54 @@ function speaker(c, on) {
 speaker(customTile(CT.SOUND_ON), true);
 speaker(customTile(CT.SOUND_OFF), false);
 
+// ---------- The noria: a ferris wheel at the far end of the ground (5x4 tiles, muted to read as distant) ----------
+{
+  const p = CPIECES.noria;
+  const c = custom.at(p.col * TILE, p.row * TILE);
+  const cx = 40;
+  const cy = 26;
+  const R = 22;
+  const steel = '#9aa4b4';
+  const steelDark = '#6a7484';
+  // A-frame legs and a ticket booth.
+  for (let y = cy; y < 62; y++) {
+    const t = (y - cy) / (62 - cy);
+    for (const dir of [-1, 1]) {
+      c.px(cx + dir * (2 + t * 18), y, steelDark);
+      c.px(cx + dir * (3 + t * 18), y, steel);
+    }
+  }
+  c.rect(30, 54, 20, 8, '#c9b8a0');
+  c.rect(30, 54, 20, 2, '#b8605a');
+  c.rect(37, 57, 6, 5, '#6a4a3a');
+  c.hline(16, 62, 48, '#8a7a64');
+  // Spokes and rim.
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2;
+    for (let r = 2; r < R; r++) c.px(cx + Math.cos(a) * r, cy + Math.sin(a) * r, steelDark);
+  }
+  for (let a = 0; a < Math.PI * 2; a += 0.02) {
+    c.px(cx + Math.cos(a) * R, cy + Math.sin(a) * R, steel);
+    c.px(cx + Math.cos(a) * (R - 1), cy + Math.sin(a) * (R - 1), steelDark);
+  }
+  for (let k = 0; k < 24; k++) {
+    const a = (k / 24) * Math.PI * 2;
+    c.px(cx + Math.cos(a) * R, cy + Math.sin(a) * R, k % 2 ? '#f2dc8a' : '#ffe066');
+  }
+  c.rect(cx - 2, cy - 2, 4, 4, steelDark);
+  c.px(cx, cy, C.bulb);
+  // Gondolas hanging from the rim.
+  const cabins = ['#b8605a', '#5a8a6a', '#c9a84a', '#5a72a8'];
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
+    const gx = Math.round(cx + Math.cos(a) * R);
+    const gy = Math.round(cy + Math.sin(a) * R);
+    c.vline(gx, gy, 2, steelDark);
+    c.rect(gx - 3, gy + 2, 7, 5, cabins[k % 4]);
+    c.hline(gx - 3, gy + 2, 7, '#e8e0d0');
+  }
+}
+
 // ---------- Evening vignette (screen overlay) ----------
 const vignette = new Canvas(320, 240);
 for (let y = 0; y < 240; y++)
@@ -910,9 +958,24 @@ const npcHeads = {
   up: ['................', '.....FHHHH......', '....FFHHHHH.....', '....HHHHHHHH....', '....HHHHHHHH....', '....HHHHHHHH....', '....HHHHHHHH....', '.....SSSSSS.....'],
   left: ['................', '......HHHHF.....', '.....HHHHHFF....', '....HHHHHHHH....', '....SSSSSHHH....', '....SESSSSHH....', '....SSSSSSHH....', '.....SSSSS......'],
 };
-const npc = new Canvas(4 * TILE, TILE);
+// A man in traje corto with a wide-brimmed sombrero cordobés.
+const MAN_PAL = { K: '#1e1a1a', H: '#24160e', S: '#e0a87e', E: '#1e1a1a', J: '#4a4a5a', W: '#f6f1e4', P: '#2a2a30', B: '#5e3a1a' };
+const hat = ['.....KKKKKK.....', '.....KKKKKK.....', '..KKKKKKKKKKKK..'];
+const manRest = ['.....SSSSSS.....', '....JJWWWWJJ....', '...JJJWWWWJJJ...', '...SJJJWWJJJS...', '....JJJJJJJJ....', '....PPPPPPPP....', '....PPP..PPP....', '....PPP..PPP....', '....BBB..BBB....'];
+const manFaces = {
+  down: ['....SSSSSSSS....', '....SESSSSES....', '....SSSSSSSS....', '.....SSSSSS.....'],
+  up: ['....HHHHHHHH....', '....HHHHHHHH....', '....HHHHHHHH....', '.....HHHHHH.....'],
+  left: ['....SSSSSSHH....', '....SESSSSHH....', '....SSSSSSSH....', '.....SSSSSH.....'],
+};
+const manBodyUp = ['.....SSSSSS.....', '....JJJJJJJJ....', '...JJJJJJJJJJ...', '...SJJJJJJJJS...', '....JJJJJJJJ....', '....PPPPPPPP....', '....PPP..PPP....', '....PPP..PPP....', '....BBB..BBB....'];
+
+// Three NPC looks, one per row: red flamenca, blue polka-dot flamenca, man in traje corto.
+// Each row has four frames: down, left, right, up.
+const npc = new Canvas(4 * TILE, 3 * TILE);
 [['down', false], ['left', false], ['left', true], ['up', false]].forEach(([dir, mirror], i) => {
   npc.at(i * TILE, 0).sprite(0, 0, [...npcHeads[dir], ...dress], NPC_PAL, mirror);
+  npc.at(i * TILE, TILE).sprite(0, 0, [...npcHeads[dir], ...dress], { ...NPC_PAL, D: '#2f5fa8', F: '#f2c230' }, mirror);
+  npc.at(i * TILE, 2 * TILE).sprite(0, 0, [...hat, ...manFaces[dir], ...(dir === 'up' ? manBodyUp : manRest)], MAN_PAL, mirror);
 });
 
 // ---------- Write files ----------
