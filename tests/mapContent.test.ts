@@ -29,6 +29,12 @@ describe('feria.json', () => {
     for (const id of Object.keys(projects)) expect(ids.has(id), id).toBe(true);
   });
 
+  it('has at least one NPC and one sign with text', () => {
+    for (const type of ['npc', 'sign'] as const) {
+      expect(objects.some((o) => o.type === type && (o.text ?? '').length > 0), type).toBe(true);
+    }
+  });
+
   it('has the portada spawn', () => {
     expect(objects.some((o) => o.type === 'spawn' && o.id === 'portada')).toBe(true);
   });

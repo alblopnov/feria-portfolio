@@ -180,6 +180,18 @@ function buildFeria() {
   m.prop(24, 23, T.POSTBOX);
   m.object('building', 24, 23, { id: 'contact' });
 
+  // A welcome sign and a flamenca NPC near the gate.
+  m.prop(16, 23, T.SIGN);
+  m.object('sign', 16, 23, {
+    id: 'welcome-sign',
+    text: 'Welcome to the Feria! Each caseta is one of my projects. Walk up to a door and press Z or Enter to look inside.',
+  });
+  m.block(21, 22);
+  m.object('npc', 21, 22, {
+    id: 'flamenca',
+    text: 'Hola! The red and white caseta up north is Caseta-musica, a jukebox for parties. The green ones are still being built, so come back soon. The post box by the gate is how to reach the author.',
+  });
+
   // Flower pots along the bottom fence, leaving the portada clear.
   for (let x = 2; x < 38; x += 3) if (x < 16 || x > 23) m.prop(x, 28, T.POT);
 

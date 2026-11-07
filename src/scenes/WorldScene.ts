@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, TILE_SIZE } from '../config';
 import { findMissingIds } from '../content/projects';
+import { DialogueBox } from '../systems/DialogueBox';
 import { canMove, resolveDirection, step, type Direction, type Tile } from '../systems/gridMovement';
+import { facingTile, findInteractable } from '../systems/interaction';
 import { parseObjects, type MapObject } from '../systems/mapObjects';
 
 const KEY_DIRS: Record<string, Direction> = {
@@ -14,6 +16,8 @@ const KEY_DIRS: Record<string, Direction> = {
   ArrowRight: 'right',
   KeyD: 'right',
 };
+const INTERACT_KEYS = new Set(['KeyZ', 'Enter', 'NumpadEnter']);
+const OPPOSITE: Record<Direction, Direction> = { up: 'down', down: 'up', left: 'right', right: 'left' };
 const FRAME_ROW: Record<Direction, number> = { down: 0, left: 1, right: 2, up: 3 };
 const STEP_MS = 160;
 
@@ -33,6 +37,8 @@ export class WorldScene extends Phaser.Scene {
   private collision!: Phaser.Tilemaps.TilemapLayer;
   private bounds = { width: 0, height: 0 };
   private objects: MapObject[] = [];
+  private npcs = new Map<MapObject, Phaser.GameObjects.Sprite>();
+  private dialogue!: DialogueBox;
 
   constructor() {
     super('World');
@@ -65,6 +71,11 @@ export class WorldScene extends Phaser.Scene {
     const spawn = this.objects.find((o) => o.type === 'spawn' && o.id === 'portada') ?? this.objects.find((o) => o.type === 'spawn');
     this.pos = this.spawnOverride ?? spawn?.tile ?? { x: 1, y: 1 };
 
+    this.npcs.clear();
+    for (const npc of this.objects.filter((o) => o.type === 'npc')) {
+      this.npcs.set(npc, this.add.sprite(npc.tile.x * TILE_SIZE, npc.tile.y * TILE_SIZE, 'npc', FRAME_ROW.down).setOrigin(0, 0).setDepth(9));
+    }
+
     ensurePlayerAnims(this);
     this.player = this.add.sprite(this.pos.x * TILE_SIZE, this.pos.y * TILE_SIZE, 'player', FRAME_ROW[this.facing] * 3).setOrigin(0, 0).setDepth(10);
 
@@ -73,11 +84,18 @@ export class WorldScene extends Phaser.Scene {
     cam.startFollow(this.player, true);
     cam.setRoundPixels(true);
 
+    this.dialogue = new DialogueBox(this);
     this.setupKeyboard();
   }
 
   update(): void {
     if (this.moving) return;
+    if (this.dialogue.isOpen()) {
+      // Movement input is ignored while the dialogue box is open.
+      this.tapped = null;
+      this.standStill();
+      return;
+    }
     const dir = resolveDirection(this.pressed, this.facing) ?? this.tapped;
     this.tapped = null;
     if (!dir) {
@@ -104,6 +122,21 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
+  private onInteractKey(): void {
+    if (this.dialogue.isOpen()) {
+      this.dialogue.advance();
+      return;
+    }
+    if (this.moving) return;
+    const target = findInteractable(this.objects, facingTile(this.pos, this.facing));
+    if (target) this.interact(target);
+  }
+
+  private interact(obj: MapObject): void {
+    if (obj.type === 'npc') this.npcs.get(obj)?.setFrame(FRAME_ROW[OPPOSITE[this.facing]]);
+    if (obj.type === 'npc' || obj.type === 'sign') this.dialogue.show(obj.text ?? '');
+  }
+
   private isBlocked(t: Tile): boolean {
     return this.collision.hasTileAt(t.x, t.y);
   }
@@ -118,6 +151,10 @@ export class WorldScene extends Phaser.Scene {
     if (!kb) return;
     kb.addCapture('UP,DOWN,LEFT,RIGHT,SPACE');
     kb.on('keydown', (e: KeyboardEvent) => {
+      if (INTERACT_KEYS.has(e.code)) {
+        if (!e.repeat) this.onInteractKey();
+        return;
+      }
       const dir = KEY_DIRS[e.code];
       if (dir && !this.pressed.includes(dir)) {
         this.pressed.push(dir);
