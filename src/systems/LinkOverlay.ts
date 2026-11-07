@@ -2,13 +2,15 @@ import type { Project } from '../content/projects';
 
 export type SafeLink = { label: string; url: string };
 
-/** The project's links that are safe to render as real anchors: https only, with a non-blank label. */
+/** The project's links that are safe to render as real anchors: https or mailto, with a non-blank label. */
 export function safeLinks(project: Project): SafeLink[] {
   return project.links.flatMap(({ label, url }) => {
     const text = (label ?? '').trim();
     if (!text) return [];
     try {
-      return new URL(url).protocol === 'https:' ? [{ label: text, url }] : [];
+      const parsed = new URL(url);
+      const ok = parsed.protocol === 'https:' || (parsed.protocol === 'mailto:' && parsed.pathname.length > 0);
+      return ok ? [{ label: text, url }] : [];
     } catch {
       return []; // not an absolute URL
     }
@@ -62,7 +64,7 @@ export class LinkOverlay {
     for (const { label, url } of links) {
       const a = document.createElement('a');
       a.href = url;
-      a.target = '_blank';
+      if (!url.startsWith('mailto:')) a.target = '_blank';
       a.rel = 'noopener noreferrer';
       a.textContent = label;
       a.title = url;

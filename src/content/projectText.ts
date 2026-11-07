@@ -2,7 +2,7 @@ import type { Project } from './projects';
 
 export const MISSING_PROJECT_TEXT = '??? (missing project)';
 
-const shortUrl = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+const shortUrl = (url: string) => url.replace(/^(https?:\/\/|mailto:)/, '').replace(/\/$/, '');
 
 /** The project card shown in the dialogue box: title, summary, tech and links. */
 export function projectCard(p: Project): string {

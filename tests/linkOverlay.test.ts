@@ -31,3 +31,15 @@ describe('safeLinks', () => {
     expect(safeLinks(withLinks([]))).toEqual([]);
   });
 });
+
+describe('safeLinks mailto', () => {
+  it('keeps a mailto link with an address', () => {
+    expect(safeLinks(withLinks([{ label: 'Email me', url: 'mailto:someone@example.com' }]))).toEqual([
+      { label: 'Email me', url: 'mailto:someone@example.com' },
+    ]);
+  });
+
+  it('drops a mailto link without an address', () => {
+    expect(safeLinks(withLinks([{ label: 'Email me', url: 'mailto:' }]))).toEqual([]);
+  });
+});
