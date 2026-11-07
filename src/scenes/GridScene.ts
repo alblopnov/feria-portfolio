@@ -27,7 +27,7 @@ export const OPPOSITE: Record<Direction, Direction> = { up: 'down', down: 'up', 
 export const FRAME_ROW: Record<Direction, number> = { down: 0, left: 1, right: 2, up: 3 };
 const STEP_MS = 160;
 /** Texture key for each tileset name used in the Tiled maps (loaded by BootScene). */
-const TILESET_TEXTURES: Record<string, string> = { feria: 'tiles', 'feria-custom': 'tiles-custom' };
+const TILESET_TEXTURES: Record<string, string> = { feria: 'tiles', 'feria-custom': 'tiles-custom', 'feria-projects': 'tiles-projects' };
 /** HUD icon frames in the tiles-custom spritesheet (CT.SOUND_ON / CT.SOUND_OFF in tools/tileset-layout.mjs). */
 const SOUND_FRAMES = { on: 31, off: 47 };
 export const DEPTH = { npc: 9, player: 10, overhead: 20, vignette: 50, warning: 100, hud: 1100 };

@@ -3,10 +3,12 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { COLUMNS, CPIECES, CT, CUSTOM_COLUMNS, CUSTOM_OFFSET, CUSTOM_ROWS, PIECES, ROWS, T, TILE, pieceTile } from './tileset-layout.mjs';
+import { COLUMNS, CPIECES, CT, CUSTOM_COLUMNS, CUSTOM_OFFSET, CUSTOM_ROWS, PIECES, PPIECES, PROJECT_COLUMNS, PROJECT_OFFSET, PROJECT_ROWS, PT, ROWS, T, TILE, pieceTile } from './tileset-layout.mjs';
 
 /** A tile from feria-custom.png, addressed in the maps' shared index space. */
 const ct = (index) => CUSTOM_OFFSET + index;
+/** A tile from feria-projects.png, addressed in the maps' shared index space. */
+const pt = (index) => PROJECT_OFFSET + index;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -130,6 +132,19 @@ class MapBuilder {
           margin: 0,
           spacing: 0,
         },
+        {
+          firstgid: PROJECT_OFFSET + 1,
+          name: 'feria-projects',
+          image: '../tilesets/feria-projects.png',
+          imagewidth: PROJECT_COLUMNS * TILE,
+          imageheight: PROJECT_ROWS * TILE,
+          tilewidth: TILE,
+          tileheight: TILE,
+          tilecount: PROJECT_COLUMNS * PROJECT_ROWS,
+          columns: PROJECT_COLUMNS,
+          margin: 0,
+          spacing: 0,
+        },
       ],
     };
   }
@@ -176,6 +191,11 @@ function buildFeria() {
   m.piece(CPIECES.casetaMusica, 24, 2);
   m.object('building', 27, 6, { id: 'caseta' });
   m.set('ground', 27, 7, ct(CT.GLOW));
+  // Secure Voting: a little town hall in the gap between the works and Caseta-musica (5x5 tiles,
+  // door in local column 2), with its padlocked ballot box out front.
+  m.piece(PPIECES.secureVoting, 17, 2);
+  m.object('building', 19, 6, { id: 'secure-voting' });
+  m.prop(21, 7, pt(PT.BALLOT_OUT));
 
   // Bunting and farolillo garlands strung over the street, drawn above the player.
   m.fill('overhead', 1, 8, 38, 1, ct(CT.PENNANTS));
@@ -184,22 +204,25 @@ function buildFeria() {
   m.fill('overhead', 1, 18, 15, 1, ct(CT.PENNANTS));
   m.fill('overhead', 24, 18, 15, 1, ct(CT.PENNANTS));
 
-  // Row B: the About house, a terraza with tables on the left and a cobbled plaza on the right.
+  // Row B: the About house and a terraza with tables on the left, two CV project casetas on the right.
   m.piece(PIECES.house, 10, 13);
   m.object('building', 12, 16, { id: 'about' });
   m.prop(9, 16, T.POT);
   m.prop(15, 16, T.POT);
-  for (const x of [3, 6]) {
-    m.prop(x, 14, T.TABLE);
-    m.prop(x - 1, 14, T.CHAIR);
+  for (const [x, y] of [[3, 14], [6, 14], [3, 16], [6, 16]]) {
+    m.prop(x, y, T.TABLE);
+    m.prop(x - 1, y, T.CHAIR);
   }
-  m.fill('ground', 25, 13, 12, 4, T.COBBLE);
-  for (const x of [27, 31, 35]) {
-    m.prop(x, 14, T.TABLE);
-    m.prop(x - 1, 14, T.CHAIR);
-  }
-  m.prop(25, 16, T.POT);
-  m.prop(36, 16, T.POT);
+  // Action Detection (a football caseta with a camera on a tripod) and Volunteer PWA (a community
+  // caseta with a noticeboard), 5x5 tiles each, doors in local column 2 and lit albero in front.
+  m.piece(PPIECES.actionDetection, 26, 12);
+  m.object('building', 28, 16, { id: 'action-detection' });
+  m.set('ground', 28, 17, ct(CT.GLOW));
+  m.prop(25, 16, pt(PT.CAMERA));
+  m.piece(PPIECES.volunteerPwa, 32, 12);
+  m.object('building', 34, 16, { id: 'volunteer-pwa' });
+  m.set('ground', 34, 17, ct(CT.GLOW));
+  m.prop(37, 16, pt(PT.NOTICE_OUT));
 
   // Lampposts along the main avenue (x 17..22).
   for (const y of [11, 20]) {
@@ -324,6 +347,56 @@ function buildAboutInterior() {
   return m;
 }
 
+/** Action Detection: a commentary booth. The big screen (the exhibit) shows a pitch with detection boxes. */
+function buildActionDetectionInterior() {
+  const m = room(12, 9, 6);
+  m.fill('ground', 2, 2, 8, 3, pt(PT.TURF));
+  m.piece(PPIECES.screen, 4, 1);
+  m.object('exhibit', 5, 2, { id: 'action-detection' });
+  m.prop(2, 2, T.SPEAKER);
+  m.prop(8, 2, T.SPEAKER);
+  // The commentary desk faces the screen: two microphones, notes and headphones.
+  m.prop(3, 5, pt(PT.MIC));
+  m.prop(4, 5, pt(PT.COMM_DESK));
+  m.prop(5, 5, pt(PT.MIC));
+  m.prop(3, 6, T.CHAIR);
+  m.prop(5, 6, T.CHAIR);
+  m.prop(1, 2, T.POT);
+  m.prop(10, 2, T.POT);
+  return m;
+}
+
+/** Volunteer PWA: a community room. The noticeboard of task cards is the exhibit; a sign-up table beside it. */
+function buildVolunteerInterior() {
+  const m = room(12, 9, 6);
+  m.piece(PPIECES.noticeBoard, 4, 1);
+  m.object('exhibit', 5, 2, { id: 'volunteer-pwa' });
+  m.prop(8, 4, pt(PT.SIGNUP_L));
+  m.prop(9, 4, pt(PT.SIGNUP_R));
+  m.prop(8, 3, T.CHAIR);
+  m.prop(9, 3, T.CHAIR);
+  m.prop(1, 2, pt(PT.BOXES));
+  m.prop(2, 2, pt(PT.BOXES));
+  m.prop(1, 6, pt(PT.BOXES));
+  m.prop(10, 2, T.POT);
+  m.fill('ground', 5, 5, 2, 1, T.RUG);
+  return m;
+}
+
+/** Secure Voting: a town hall chamber. The padlocked ballot box is the exhibit, under the live results board. */
+function buildSecureVotingInterior() {
+  const m = room(12, 9, 6);
+  m.fill('ground', 6, 2, 1, 6, pt(PT.CARPET));
+  m.piece(PPIECES.resultsBoard, 4, 1);
+  m.prop(6, 4, pt(PPIECES.ballotBox.row * PROJECT_COLUMNS + PPIECES.ballotBox.col));
+  m.prop(6, 5, pt((PPIECES.ballotBox.row + 1) * PROJECT_COLUMNS + PPIECES.ballotBox.col));
+  m.object('exhibit', 6, 5, { id: 'secure-voting' });
+  for (const x of [1, 2, 9, 10]) m.prop(x, 2, pt(PT.BOOTH));
+  m.prop(1, 6, T.POT);
+  m.prop(10, 6, T.POT);
+  return m;
+}
+
 function save(rel, map) {
   const file = join(root, rel);
   mkdirSync(dirname(file), { recursive: true });
@@ -334,3 +407,6 @@ function save(rel, map) {
 save('public/assets/maps/feria.json', buildFeria());
 save('public/assets/maps/caseta.json', buildCasetaInterior());
 save('public/assets/maps/about.json', buildAboutInterior());
+save('public/assets/maps/action-detection.json', buildActionDetectionInterior());
+save('public/assets/maps/volunteer-pwa.json', buildVolunteerInterior());
+save('public/assets/maps/secure-voting.json', buildSecureVotingInterior());

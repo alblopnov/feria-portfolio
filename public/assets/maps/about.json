@@ -644,6 +644,19 @@
    "columns": 16,
    "margin": 0,
    "spacing": 0
+  },
+  {
+   "firstgid": 289,
+   "name": "feria-projects",
+   "image": "../tilesets/feria-projects.png",
+   "imagewidth": 256,
+   "imageheight": 128,
+   "tilewidth": 16,
+   "tileheight": 16,
+   "tilecount": 128,
+   "columns": 16,
+   "margin": 0,
+   "spacing": 0
   }
  ]
 }

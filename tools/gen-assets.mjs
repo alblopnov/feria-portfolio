@@ -5,7 +5,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
-import { COLUMNS, CPIECES, CT, CUSTOM_COLUMNS, CUSTOM_ROWS, PIECES, ROWS, T, TILE } from './tileset-layout.mjs';
+import { COLUMNS, CPIECES, CT, CUSTOM_COLUMNS, CUSTOM_ROWS, PIECES, PPIECES, PROJECT_COLUMNS, PROJECT_ROWS, PT, ROWS, T, TILE } from './tileset-layout.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -585,6 +585,13 @@ const FONT = {
   R: ['##.', '#.#', '##.', '#.#', '#.#'],
   S: ['.##', '#..', '.#.', '..#', '##.'],
   T: ['###', '.#.', '.#.', '.#.', '.#.'],
+  G: ['.##', '#..', '#.#', '#.#', '.##'],
+  K: ['#.#', '#.#', '##.', '#.#', '#.#'],
+  L: ['#..', '#..', '#..', '#..', '###'],
+  N: ['##.', '#.#', '#.#', '#.#', '#.#'],
+  O: ['.#.', '#.#', '#.#', '#.#', '.#.'],
+  U: ['#.#', '#.#', '#.#', '#.#', '###'],
+  V: ['#.#', '#.#', '#.#', '#.#', '.#.'],
 };
 function text(c, x, y, str, color, glow) {
   [...str].forEach((ch, i) => {
@@ -867,6 +874,505 @@ speaker(customTile(CT.SOUND_OFF), false);
   }
 }
 
+// =====================================================================
+// feria-projects.png: the CV project casetas and their rooms
+// =====================================================================
+const proj = new Canvas(PROJECT_COLUMNS * TILE, PROJECT_ROWS * TILE);
+const projTile = (index) => proj.at((index % PROJECT_COLUMNS) * TILE, Math.floor(index / PROJECT_COLUMNS) * TILE);
+const projPiece = (p) => proj.at(p.col * TILE, p.row * TILE);
+
+const INK = '#16161c';
+const NAVY = { deep: '#121a33', mid: '#1f2c55', light: '#34477e' };
+const BURG = { deep: '#4a1020', mid: '#7a1f34', light: '#a8354e' };
+const GOLD = { deep: '#94701e', mid: '#d4a83a', light: '#f4d77e' };
+const PITCH = { a: '#58c23e', b: '#3fa330', line: '#f4f7ee', dark: '#1f4a1a' };
+const ORANGE = { deep: '#a4501a', mid: '#e8822c', light: '#f7a94e' };
+const SUN = { deep: '#c99a1e', mid: '#f6c945', light: '#fde58e' };
+const STEEL = { dark: '#545c6a', mid: '#87909f', light: '#b9c1cc' };
+const CREAM = '#ece2c8';
+const CREAM_SHADE = '#c9bb98';
+
+/** A small closed padlock: shackle on top, body below (7x8 px), top-left at (x, y). */
+function padlock(c, x, y, body, shade) {
+  c.rect(x + 1, y, 5, 1, STEEL.light);
+  c.vline(x + 1, y, 3, STEEL.light);
+  c.vline(x + 5, y, 3, STEEL.mid);
+  c.rect(x, y + 3, 7, 5, body);
+  c.hline(x, y + 7, 7, shade);
+  c.vline(x + 6, y + 3, 5, shade);
+  c.px(x + 3, y + 5, INK);
+  c.px(x + 3, y + 6, INK);
+}
+
+/** A football: white with dark patches, 5x5 px. */
+function football(c, x, y) {
+  c.sprite(x, y, ['.www.', 'wkwkw', 'wwkww', 'wkwkw', '.www.'], { w: '#ffffff', k: INK });
+}
+
+// ---------- Secure Voting: a town hall in navy and burgundy with gold trim (5x5 tiles, door in local column 2) ----------
+{
+  const p = PPIECES.secureVoting;
+  const c = projPiece(p);
+  const W = p.w * TILE;
+  const H = p.h * TILE;
+  const mid = W / 2;
+  // Classical pediment with a gold rim, a padlock seal in the tympanum.
+  const PED = 21;
+  for (let x = 1; x < W - 1; x++) {
+    const top = 3 + Math.round((Math.abs(x - mid + 0.5) * (PED - 4)) / (mid - 1));
+    c.vline(x, top, PED - top, NAVY.mid);
+    c.px(x, top, C.outline);
+    c.px(x, top + 1, GOLD.mid);
+    c.px(x, top + 2, GOLD.deep);
+  }
+  c.rect(mid - 1, 0, 2, 3, GOLD.mid); // finial
+  c.px(mid - 1, 0, GOLD.light);
+  for (let a = 0; a < Math.PI * 2; a += 0.05) c.px(mid - 0.5 + Math.cos(a) * 5.5, 14 + Math.sin(a) * 4.5, GOLD.deep);
+  padlock(c, mid - 4, 10, GOLD.mid, GOLD.deep);
+  // Cornice and a burgundy frieze that reads VOTE.
+  c.rect(0, PED, W, 3, GOLD.mid);
+  c.hline(0, PED, W, C.outline);
+  c.hline(0, PED + 2, W, GOLD.deep);
+  c.rect(0, PED + 3, W, 8, BURG.mid);
+  c.hline(0, PED + 10, W, BURG.deep);
+  for (let x = 2; x < W; x += 6) c.px(x, PED + 6, GOLD.deep);
+  c.rect(mid - 10, PED + 3, 20, 8, BURG.deep);
+  text(c, mid - 8, PED + 5, 'VOTE', GOLD.light);
+  c.hline(0, PED + 11, W, GOLD.mid);
+  // Navy ashlar wall.
+  const WALL = PED + 12;
+  c.rect(0, WALL, W, 73 - WALL, NAVY.mid);
+  for (let y = WALL + 5; y < 73; y += 6) {
+    c.hline(0, y, W, NAVY.deep);
+    for (let x = (y / 6) % 2 ? 3 : 9; x < W; x += 12) c.vline(x, y - 5, 5, NAVY.deep);
+  }
+  // Tall burgundy windows with gold lattice between the columns.
+  for (const wx of [10, 62]) {
+    c.rect(wx - 1, 38, 10, 24, GOLD.deep);
+    c.rect(wx, 40, 8, 21, '#0c1226');
+    c.rect(wx + 1, 39, 6, 1, GOLD.deep);
+    c.vline(wx + 4, 40, 21, GOLD.mid);
+    c.hline(wx, 50, 8, GOLD.mid);
+    c.rect(wx, 40, 2, 21, BURG.light);
+    c.rect(wx + 6, 40, 2, 21, BURG.light);
+    c.vline(wx + 1, 40, 21, BURG.mid);
+    c.vline(wx + 6, 40, 21, BURG.mid);
+  }
+  // Cream columns with gold capitals and bases.
+  for (const cx of [2, 20, 54, 72]) {
+    c.rect(cx - 1, WALL, 8, 3, GOLD.mid);
+    c.hline(cx - 1, WALL + 2, 8, GOLD.deep);
+    c.rect(cx, WALL + 3, 6, 70 - WALL - 3, CREAM);
+    c.vline(cx + 2, WALL + 3, 70 - WALL - 3, CREAM_SHADE);
+    c.vline(cx + 4, WALL + 3, 70 - WALL - 3, CREAM_SHADE);
+    c.vline(cx + 5, WALL + 3, 70 - WALL - 3, '#a89a78');
+    c.rect(cx - 1, 70, 8, 3, GOLD.mid);
+  }
+  // The vault door (local column 2): a steel door in a burgundy and gold frame, wheel handle and padlock.
+  const dx = 2 * TILE;
+  c.rect(dx - 3, 36, TILE + 6, 37, BURG.mid);
+  c.rect(dx - 2, 37, TILE + 4, 36, GOLD.mid);
+  c.rect(dx - 1, 38, TILE + 2, 35, BURG.deep);
+  c.rect(dx, 39, TILE, 34, STEEL.mid);
+  c.vline(dx, 39, 34, STEEL.light);
+  c.vline(dx + TILE - 1, 39, 34, STEEL.dark);
+  c.hline(dx, 39, TILE, STEEL.light);
+  for (let y = 41; y < 72; y += 5) c.px(dx + 2, y, STEEL.dark), c.px(dx + TILE - 3, y, STEEL.dark);
+  const wy = 50;
+  for (let a = 0; a < Math.PI * 2; a += 0.08) c.px(mid - 0.5 + Math.cos(a) * 5, wy + Math.sin(a) * 5, GOLD.mid);
+  for (const [ox, oy] of [[0, -4], [0, 4], [-4, 0], [4, 0]]) c.rect(mid - 1 + Math.sign(ox) * 2, wy - 0.5 + Math.sign(oy) * 2, 1, 1, GOLD.deep), c.px(mid - 0.5 + ox, wy + oy, GOLD.light);
+  c.rect(mid - 1, wy - 1, 2, 2, GOLD.light);
+  padlock(c, mid - 4, 60, GOLD.mid, GOLD.deep);
+  // Steps.
+  c.rect(0, 73, W, 3, CREAM);
+  c.hline(0, 75, W, CREAM_SHADE);
+  c.rect(0, 76, W, 4, CREAM_SHADE);
+  c.hline(0, 77, W, '#a89a78');
+  c.vline(0, PED, H - PED, C.outline);
+  c.vline(W - 1, PED, H - PED, C.outline);
+  c.hline(0, H - 1, W, C.outline);
+}
+
+// ---------- Action Detection: a football caseta (5x5 tiles, door in local column 2) ----------
+{
+  const p = PPIECES.actionDetection;
+  const c = projPiece(p);
+  const W = p.w * TILE;
+  const H = p.h * TILE;
+  const mid = W / 2;
+  // Floodlight towers at both corners.
+  for (const x0 of [0, W - 10]) {
+    c.rect(x0 + 4, 7, 2, 18, INK);
+    for (let y = 9; y < 25; y += 4) c.px(x0 + (x0 ? 6 : 3), y, GOLD.mid);
+    c.rect(x0, 0, 10, 7, INK);
+    for (let j = 0; j < 2; j++) for (let i = 0; i < 4; i++) c.rect(x0 + 1 + i * 2, 1 + j * 3, 1, 2, '#fff6c0');
+    c.hline(x0, 6, 10, GOLD.mid);
+  }
+  // Scoreboard on two legs: GOAL in bulb letters.
+  c.rect(mid - 9, 15, 2, 9, INK);
+  c.rect(mid + 7, 15, 2, 9, INK);
+  c.rect(mid - 18, 1, 36, 15, GOLD.mid);
+  c.rect(mid - 17, 2, 34, 13, INK);
+  c.rect(mid - 15, 4, 30, 9, '#08080c');
+  text(c, mid - 8, 6, 'GOAL', C.bulb, GOLD.deep);
+  for (let x = mid - 16; x < mid + 17; x += 3) c.px(x, 2, x % 2 ? GOLD.light : C.bulb);
+  // The stand canopy: a black beam edged in gold.
+  const ROOF = 23;
+  c.rect(0, ROOF, W, 6, INK);
+  c.hline(0, ROOF, W, GOLD.mid);
+  c.hline(0, ROOF + 5, W, GOLD.mid);
+  for (let x = 3; x < W; x += 8) c.rect(x, ROOF + 2, 3, 2, GOLD.deep);
+  // The front is a mown pitch: horizontal bands of two greens, with white pitch markings.
+  const BODY = ROOF + 6;
+  for (let y = BODY; y < H; y++) c.hline(0, y, W, Math.floor((y - BODY) / 6) % 2 ? PITCH.a : PITCH.b);
+  c.rect(2, BODY + 2, W - 4, 1, PITCH.line); // touchline
+  c.vline(2, BODY + 2, H - BODY - 4, PITCH.line);
+  c.vline(W - 3, BODY + 2, H - BODY - 4, PITCH.line);
+  for (let a = Math.PI; a <= Math.PI * 2; a += 0.04) c.px(mid - 0.5 + Math.cos(a) * 13, 44 + Math.sin(a) * 10, PITCH.line); // penalty arc
+  // Corner flags in gold.
+  for (const [fx, dir] of [[7, 1], [W - 8, -1]]) {
+    c.vline(fx, 58, 16, '#ffffff');
+    for (let j = 0; j < 4; j++) c.hline(dir > 0 ? fx + 1 : fx - 4 + j, 58 + j, 4 - j, GOLD.mid);
+  }
+  football(c, 14, 70);
+  // The entrance is the goal mouth: white posts and crossbar over a net.
+  const gx0 = mid - 13;
+  const gx1 = mid + 12;
+  c.rect(gx0, 46, gx1 - gx0 + 1, H - 47, PITCH.dark);
+  for (let y = 48; y < H - 1; y++)
+    for (let x = gx0 + 2; x < gx1; x++) if ((x + y) % 4 === 0 || (x - y + 400) % 4 === 0) c.px(x, y, '#9fc598');
+  c.rect(gx0, 44, gx1 - gx0 + 1, 3, '#ffffff');
+  c.hline(gx0, 46, gx1 - gx0 + 1, '#c8ccc4');
+  c.rect(gx0, 44, 2, H - 45, '#ffffff');
+  c.rect(gx1 - 1, 44, 2, H - 45, '#ffffff');
+  c.vline(gx0 + 1, 47, H - 48, '#c8ccc4');
+  c.vline(gx1, 47, H - 48, '#c8ccc4');
+  c.hline(gx0 - 1, H - 2, gx1 - gx0 + 3, PITCH.line); // goal line
+  c.vline(0, ROOF, H - ROOF, C.outline);
+  c.vline(W - 1, ROOF, H - ROOF, C.outline);
+  c.hline(0, H - 1, W, C.outline);
+}
+
+// ---------- Volunteer PWA: a community caseta in orange, yellow and white (5x5 tiles, door in local column 2) ----------
+{
+  const p = PPIECES.volunteerPwa;
+  const c = projPiece(p);
+  const W = p.w * TILE;
+  const H = p.h * TILE;
+  const mid = W / 2;
+  // A rounded canopy in wide orange and yellow stripes.
+  const EAVE = 27;
+  for (let x = 0; x < W; x++) {
+    const t = (x - mid + 0.5) / mid;
+    const top = 2 + Math.round(20 * (1 - Math.sqrt(Math.max(0, 1 - t * t))));
+    const band = Math.floor((x + 4) / 8) % 2 ? SUN.mid : ORANGE.mid;
+    c.vline(x, top, EAVE - top, band);
+    c.px(x, top, C.outline);
+    c.px(x, top + 1, '#ffffff');
+    c.px(x, EAVE - 2, Math.floor((x + 4) / 8) % 2 ? SUN.deep : ORANGE.deep);
+  }
+  c.rect(mid - 1, 0, 2, 2, ORANGE.deep);
+  // Scalloped white valance.
+  for (let x = 0; x < W; x++) {
+    const d = Math.abs((x % 8) - 3.5);
+    const depth = d < 1.5 ? 4 : d < 2.5 ? 3 : 2;
+    c.vline(x, EAVE, depth, '#ffffff');
+    c.px(x, EAVE + depth, ORANGE.deep);
+  }
+  // Banner on the canopy: VOLUNTEERS.
+  const bx = mid - 22;
+  c.rect(bx - 3, 11, 50, 9, C.whiteShade);
+  for (const [tx, dir] of [[bx - 3, 1], [bx + 46, -1]]) for (let j = 0; j < 9; j++) if (Math.abs(j - 4) > 1) c.px(tx + (dir > 0 ? 0 : 0), 11 + j, C.whiteShade);
+  c.px(bx - 3, 15, CLEAR), c.px(bx - 2, 15, CLEAR), c.px(bx + 46, 15, CLEAR), c.px(bx + 45, 15, CLEAR);
+  c.rect(bx, 10, 44, 9, '#ffffff');
+  c.hline(bx, 18, 44, C.whiteShade);
+  text(c, bx + 3, 12, 'VOLUNTEERS', ORANGE.deep);
+  // White walls with orange corner posts and a yellow skirt.
+  const BODY = EAVE + 5;
+  c.rect(0, BODY, W, H - BODY, '#fbf5e6');
+  c.rect(0, BODY, 3, H - BODY, ORANGE.mid);
+  c.rect(W - 3, BODY, 3, H - BODY, ORANGE.mid);
+  c.rect(0, 72, W, 8, SUN.mid);
+  for (let x = 2; x < W; x += 5) c.rect(x, 74, 2, 2, ORANGE.mid);
+  c.hline(0, 72, W, SUN.deep);
+  // Serving hatches with warm light and parcels on the counter.
+  for (const wx of [7, 53]) {
+    c.rect(wx, 44, 20, 20, ORANGE.deep);
+    c.rect(wx + 1, 45, 18, 15, WARM.mid);
+    c.rect(wx + 1, 45, 18, 4, WARM.light);
+    c.rect(wx - 1, 60, 22, 3, SUN.mid);
+    c.hline(wx - 1, 62, 22, SUN.deep);
+    c.rect(wx + 3, 55, 6, 5, '#c89a5a');
+    c.hline(wx + 3, 57, 6, '#9a7040');
+    c.rect(wx + 11, 53, 5, 7, '#ffffff');
+    c.hline(wx + 12, 55, 3, ORANGE.mid);
+    c.hline(wx + 12, 57, 3, ORANGE.mid);
+  }
+  // Paper bunting of hearts and helping hands strung under the valance.
+  const sag = (x) => 35 + Math.round(Math.sin((x / (W - 1)) * Math.PI) * 4);
+  for (let x = 1; x < W - 1; x++) c.px(x, sag(x), C.outline);
+  const heart = ['.#.#.', '#####', '#####', '.###.', '..#..'];
+  const hand = ['#.#.#', '#####', '#####', '.####', '.###.'];
+  for (let i = 0; i < 9; i++) {
+    const hx = 3 + i * 9;
+    if (hx > mid - 9 && hx < mid + 5) continue;
+    const art = i % 2 ? hand : heart;
+    c.sprite(hx, sag(hx + 2) + 1, art, { '#': i % 2 ? SUN.mid : ORANGE.mid });
+    c.px(hx + 2, sag(hx + 2) + 2, '#ffffff');
+  }
+  // The entrance: an arched opening with warm light, curtains tied back in orange.
+  const dx = 2 * TILE;
+  for (let y = 38; y < H; y++) {
+    const t = (y - 38) / (H - 38);
+    c.hline(dx, y, TILE, t < 0.3 ? WARM.mid : t < 0.6 ? WARM.light : WARM.hot);
+  }
+  for (let x = dx; x < dx + TILE; x++) {
+    const a = Math.abs(x - mid + 0.5);
+    for (let y = 38; y < 38 + Math.round(a * a * 0.06); y++) c.px(x, y, '#fbf5e6');
+  }
+  for (let j = 0; j < 26; j++) {
+    const w = Math.max(1, 4 - Math.floor(j / 7));
+    c.hline(dx - 1, 40 + j, w, ORANGE.mid);
+    c.hline(dx + TILE + 1 - w, 40 + j, w, ORANGE.mid);
+  }
+  c.sprite(dx + 5, 64, heart, { '#': ORANGE.mid }); // a heart on the doormat
+  c.vline(0, BODY, H - BODY, C.outline);
+  c.vline(W - 1, BODY, H - BODY, C.outline);
+  c.hline(0, H - 1, W, C.outline);
+}
+
+// ---------- Outdoor props ----------
+{
+  // A broadcast camera on a tripod: black body, gold stripe, blue lens glint.
+  const c = projTile(PT.CAMERA);
+  for (const [x1] of [[2], [8], [14]]) for (let j = 0; j < 7; j++) c.px(8 + Math.round(((x1 - 8) * j) / 6), 9 + j, STEEL.dark);
+  c.rect(7, 8, 3, 2, STEEL.dark);
+  c.rect(2, 2, 10, 7, INK);
+  c.hline(2, 4, 10, GOLD.mid);
+  c.rect(4, 0, 4, 2, INK);
+  c.rect(12, 3, 3, 5, '#2a2a34');
+  c.rect(13, 4, 2, 2, '#6ec0e8');
+  c.px(3, 6, GOLD.light);
+}
+{
+  // A small noticeboard on legs, pinned with task cards.
+  const c = projTile(PT.NOTICE_OUT);
+  c.rect(3, 11, 2, 5, C.woodDark);
+  c.rect(11, 11, 2, 5, C.woodDark);
+  c.rect(1, 1, 14, 11, C.woodDark);
+  c.rect(2, 2, 12, 9, '#c48a52');
+  const cards = [[3, 3, '#ffffff'], [8, 3, SUN.light], [3, 7, ORANGE.light], [8, 7, '#ffffff']];
+  for (const [x, y, col] of cards) c.rect(x, y, 4, 3, col), c.px(x + 1, y, ORANGE.deep);
+  c.hline(1, 0, 14, ORANGE.mid);
+}
+{
+  // A ballot box with a padlock on a little stand.
+  const c = projTile(PT.BALLOT_OUT);
+  c.rect(4, 12, 2, 4, C.woodDark);
+  c.rect(10, 12, 2, 4, C.woodDark);
+  c.rect(6, 0, 4, 4, '#ffffff');
+  c.hline(7, 1, 2, NAVY.light);
+  c.rect(2, 3, 12, 9, NAVY.mid);
+  c.rect(2, 3, 12, 2, NAVY.light);
+  c.hline(5, 4, 6, INK);
+  c.hline(2, 11, 12, NAVY.deep);
+  c.vline(2, 3, 9, GOLD.mid);
+  c.vline(13, 3, 9, GOLD.mid);
+  padlock(c, 5, 5, GOLD.mid, GOLD.deep);
+}
+
+// ---------- Interior furniture ----------
+function projDesk(c) {
+  c.rect(0, 6, 16, 5, '#3a3a46');
+  c.hline(0, 6, 16, '#5a5a6a');
+  c.rect(0, 11, 16, 4, '#26262e');
+  c.hline(0, 15, 16, '#00000055');
+}
+{
+  // Big screen: a pitch seen from above, players boxed by the detector.
+  const p = PPIECES.screen;
+  const c = projPiece(p);
+  c.rect(0, 1, 48, 26, INK);
+  c.rect(2, 3, 44, 22, PITCH.b);
+  for (let y = 3; y < 25; y++) if (Math.floor((y - 3) / 4) % 2) c.hline(2, y, 44, PITCH.a);
+  c.hline(4, 5, 40, PITCH.line);
+  c.hline(4, 22, 40, PITCH.line);
+  c.vline(4, 5, 18, PITCH.line);
+  c.vline(43, 5, 18, PITCH.line);
+  c.vline(24, 5, 18, PITCH.line);
+  for (let a = 0; a < Math.PI * 2; a += 0.1) c.px(24 + Math.cos(a) * 4, 13.5 + Math.sin(a) * 4, PITCH.line);
+  const player = (x, y, kit) => c.rect(x, y, 2, 3, kit);
+  const box = (x, y, w, h, col) => {
+    c.hline(x, y, w, col);
+    c.hline(x, y + h - 1, w, col);
+    c.vline(x, y, h, col);
+    c.vline(x + w - 1, y, h, col);
+    c.rect(x, y - 2, Math.min(w, 5), 2, col); // label tag
+  };
+  for (const [x, y] of [[9, 9], [15, 16], [29, 8], [36, 15]]) player(x, y, ORANGE.mid);
+  for (const [x, y] of [[12, 13], [20, 7], [33, 12], [39, 9]]) player(x, y, '#6ec0e8');
+  c.rect(27, 15, 2, 2, '#ffffff'); // the ball
+  box(7, 7, 6, 7, '#ffe066');
+  box(31, 10, 6, 7, '#ffe066');
+  box(13, 14, 6, 7, '#ff8ad0');
+  box(25, 13, 6, 6, '#7af0ff');
+  c.rect(40, 4, 4, 2, '#e04848'); // REC dot
+  c.hline(2, 3, 44, '#ffffff22');
+  c.rect(21, 27, 6, 2, '#3a3a46');
+  c.rect(16, 29, 16, 2, '#3a3a46');
+  c.hline(16, 31, 16, '#00000055');
+}
+{
+  const c = projTile(PT.MIC);
+  projDesk(c);
+  c.rect(5, 9, 6, 1, STEEL.dark);
+  c.vline(8, 3, 7, STEEL.dark);
+  c.rect(6, 0, 5, 5, STEEL.mid);
+  for (let y = 1; y < 4; y += 2) for (let x = 7; x < 10; x += 2) c.px(x, y, STEEL.dark);
+  c.hline(6, 4, 5, GOLD.mid);
+  c.rect(12, 8, 2, 2, '#e04848'); // on-air light
+}
+{
+  const c = projTile(PT.COMM_DESK);
+  projDesk(c);
+  c.rect(2, 4, 7, 4, '#f4f0e0'); // match notes
+  c.hline(3, 5, 5, '#9a9080');
+  c.hline(3, 6, 4, '#9a9080');
+  for (let a = Math.PI; a <= Math.PI * 2; a += 0.15) c.px(12 + Math.cos(a) * 3, 6 + Math.sin(a) * 3, INK); // headphones
+  c.rect(8, 5, 2, 3, GOLD.mid);
+  c.rect(14, 5, 2, 3, GOLD.mid);
+}
+{
+  // Noticeboard covered in task cards.
+  const p = PPIECES.noticeBoard;
+  const c = projPiece(p);
+  c.rect(0, 1, 48, 27, '#6a3e1c');
+  c.rect(2, 3, 44, 23, '#c48a52');
+  const r = rng(77);
+  for (let i = 0; i < 70; i++) c.px(2 + r() * 44, 3 + r() * 23, r() < 0.5 ? '#b07842' : '#d49a62');
+  c.rect(15, 4, 18, 7, ORANGE.mid);
+  text(c, 15 + 0, 5, 'TASKS', '#ffffff');
+  const colors = ['#ffffff', SUN.light, ORANGE.light, '#a8d8f0', '#ffffff', SUN.mid];
+  const cards = [[4, 5], [4, 14], [8, 8], [36, 5], [40, 13], [34, 15], [16, 13], [23, 15], [28, 12], [11, 19], [20, 20]];
+  cards.forEach(([x, y], i) => {
+    c.rect(x, y, 7, 6, colors[i % colors.length]);
+    c.hline(x + 1, y + 2, 5, '#8a7a64');
+    c.hline(x + 1, y + 4, 3 + (i % 3), '#8a7a64');
+    c.px(x + 3, y, i % 2 ? ORANGE.deep : NAVY.light);
+    if (i % 4 === 1) c.px(x + 5, y + 4, '#3d8a3a'), c.px(x + 4, y + 3, '#3d8a3a'); // a tick: done
+  });
+  c.hline(0, 28, 48, '#00000044');
+}
+function signupBase(c) {
+  c.rect(0, 6, 16, 6, ORANGE.mid);
+  c.hline(0, 6, 16, ORANGE.light);
+  for (let x = 0; x < 16; x += 2) c.px(x, 12, SUN.mid);
+  c.rect(0, 12, 16, 3, ORANGE.deep);
+  c.hline(0, 15, 16, '#00000055');
+}
+{
+  const c = projTile(PT.SIGNUP_L);
+  signupBase(c);
+  c.rect(4, 1, 8, 9, C.woodMid);
+  c.rect(5, 2, 6, 7, '#ffffff');
+  c.rect(6, 0, 4, 2, STEEL.mid);
+  for (let y = 3; y < 9; y += 2) c.hline(6, y, 4, '#8a7a64');
+  c.px(9, 3, ORANGE.deep);
+  c.px(9, 5, ORANGE.deep);
+  c.rect(12, 4, 1, 5, NAVY.light); // pen
+}
+{
+  const c = projTile(PT.SIGNUP_R);
+  signupBase(c);
+  c.rect(2, 3, 4, 5, SUN.deep); // pen cup
+  c.px(3, 1, NAVY.light), c.vline(3, 1, 2, NAVY.light), c.vline(5, 2, 1, ORANGE.deep);
+  c.rect(8, 4, 6, 4, '#ffffff'); // flyers
+  c.rect(9, 3, 6, 4, SUN.light);
+  c.sprite(10, 4, ['#.#', '###', '.#.'], { '#': ORANGE.mid });
+}
+{
+  // Pitch-striped carpet for the commentary booth.
+  const c = projTile(PT.TURF);
+  for (let y = 0; y < 16; y++) c.hline(0, y, 16, Math.floor(y / 4) % 2 ? PITCH.a : PITCH.b);
+  const r = rng(5);
+  for (let i = 0; i < 10; i++) c.px(r() * 16, r() * 16, PITCH.dark);
+}
+{
+  // Navy carpet with gold dots for the town hall.
+  const c = projTile(PT.CARPET);
+  c.rect(0, 0, 16, 16, NAVY.mid);
+  for (const [x, y] of [[3, 3], [11, 3], [7, 7], [3, 11], [11, 11], [15, 7], [7, 15]]) c.px(x, y, GOLD.mid);
+  c.vline(0, 0, 16, BURG.mid);
+  c.vline(15, 0, 16, BURG.mid);
+}
+{
+  // A voting booth with a burgundy curtain.
+  const c = projTile(PT.BOOTH);
+  c.rect(1, 0, 14, 15, C.woodDark);
+  c.rect(2, 1, 12, 14, '#2a1a10');
+  c.hline(1, 0, 14, GOLD.mid);
+  for (let x = 2; x < 14; x++) c.vline(x, 2, 12, x % 3 === 0 ? BURG.deep : x < 8 ? BURG.mid : BURG.light);
+  c.rect(10, 2, 4, 12, '#2a1a10');
+  c.rect(11, 7, 3, 1, C.woodLight);
+  c.hline(1, 15, 14, '#00000055');
+}
+{
+  // Donation boxes, one with a heart.
+  const c = projTile(PT.BOXES);
+  c.rect(1, 7, 9, 8, '#c89a5a');
+  c.hline(1, 7, 9, '#dcb47a');
+  c.vline(5, 7, 8, '#9a7040');
+  c.rect(7, 2, 8, 7, '#d8aa66');
+  c.hline(7, 2, 8, '#ecc488');
+  c.sprite(9, 4, ['#.#', '###', '.#.'], { '#': ORANGE.mid });
+  c.rect(9, 9, 6, 6, '#c08e50');
+  c.hline(9, 9, 6, '#d8aa66');
+  c.hline(1, 15, 14, '#00000055');
+}
+{
+  // Live results board: three bars and a blinking dot.
+  const p = PPIECES.resultsBoard;
+  const c = projPiece(p);
+  c.rect(0, 1, 48, 27, GOLD.mid);
+  c.hline(0, 1, 48, GOLD.light);
+  c.rect(2, 3, 44, 23, NAVY.deep);
+  text(c, 5, 5, 'RESULTS', GOLD.light);
+  c.rect(37, 5, 3, 3, '#e04848');
+  c.px(38, 6, '#ff9a9a');
+  c.hline(5, 23, 38, STEEL.mid);
+  const bars = [[8, 11, GOLD.light], [19, 7, BURG.light], [30, 4, '#7aa0e0']];
+  for (const [x, h, col] of bars) {
+    c.rect(x, 23 - h, 8, h, col);
+    c.hline(x, 23 - h, 8, '#ffffff');
+  }
+  for (let x = 5; x < 43; x += 4) c.px(x, 12, NAVY.light);
+  c.hline(0, 28, 48, '#00000044');
+}
+{
+  // Ballot box (1x2): acrylic body full of ballots, navy lid with a slot, gold padlock, on a little table.
+  const p = PPIECES.ballotBox;
+  const c = projPiece(p);
+  c.rect(6, 1, 4, 7, '#ffffff'); // a ballot going in
+  c.hline(7, 3, 2, NAVY.light);
+  c.px(8, 5, BURG.mid);
+  c.rect(1, 7, 14, 3, NAVY.mid);
+  c.hline(1, 7, 14, NAVY.light);
+  c.hline(4, 8, 8, INK);
+  c.hline(1, 9, 14, GOLD.mid);
+  c.rect(2, 10, 12, 22 - 10, '#c9d8ea');
+  c.vline(2, 10, 12, '#e4eef8');
+  c.vline(13, 10, 12, '#9fb2c8');
+  const r = rng(31);
+  for (let i = 0; i < 9; i++) c.rect(3 + Math.floor(r() * 8), 13 + Math.floor(r() * 8), 3, 2, '#ffffff');
+  padlock(c, 5, 15, GOLD.mid, GOLD.deep);
+  c.rect(1, 22, 14, 2, NAVY.mid);
+  c.hline(1, 22, 14, GOLD.mid);
+  c.rect(0, 24, 16, 2, C.woodLight);
+  c.rect(2, 26, 2, 5, C.woodDark);
+  c.rect(12, 26, 2, 5, C.woodDark);
+  c.hline(1, 31, 14, '#00000055');
+}
+
 // ---------- Evening vignette (screen overlay) ----------
 const vignette = new Canvas(320, 240);
 for (let y = 0; y < 240; y++)
@@ -987,6 +1493,7 @@ function save(rel, canvas) {
 }
 save('public/assets/tilesets/feria.png', sheet);
 save('public/assets/tilesets/feria-custom.png', custom);
+save('public/assets/tilesets/feria-projects.png', proj);
 save('public/assets/sprites/vignette.png', vignette);
 save('public/assets/sprites/player.png', player);
 save('public/assets/sprites/npc.png', npc);

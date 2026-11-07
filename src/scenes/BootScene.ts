@@ -27,6 +27,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('tiles', 'assets/tilesets/feria.png');
     // Loaded as a spritesheet so its HUD icons can be used as frames as well as map tiles.
     this.load.spritesheet('tiles-custom', 'assets/tilesets/feria-custom.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    this.load.image('tiles-projects', 'assets/tilesets/feria-projects.png');
     this.load.image('vignette', 'assets/sprites/vignette.png');
     this.load.spritesheet('player', 'assets/sprites/player.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     this.load.spritesheet('npc', 'assets/sprites/npc.png', { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
@@ -40,7 +41,7 @@ export class BootScene extends Phaser.Scene {
     // loaderror event, so check the caches as well.
     const missing = [
       ...this.failed,
-      ...(['tiles', 'tiles-custom', 'vignette', 'player', 'npc'] as const).filter((k) => !this.textures.exists(k)),
+      ...(['tiles', 'tiles-custom', 'tiles-projects', 'vignette', 'player', 'npc'] as const).filter((k) => !this.textures.exists(k)),
       ...['feria', ...Object.values(interiors).map((i) => i.mapKey)].filter((k) => !this.cache.tilemap.exists(k)),
     ];
     if (missing.length > 0) {

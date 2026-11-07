@@ -21,6 +21,20 @@ describe('projects', () => {
     }
   });
 
+  it('opens the three CV projects, each in its own room', () => {
+    const titles = { 'action-detection': 'Action Detection', 'volunteer-pwa': 'Volunteer PWA', 'secure-voting': 'Secure Voting' };
+    for (const [id, title] of Object.entries(titles)) {
+      const p = projects[id];
+      expect(p?.id, id).toBe(id);
+      expect(p.title).toBe(title);
+      expect(p.locked).toBe(false);
+      expect(p.teaser).toBe('');
+      expect(p.interior).toBe(id);
+      expect(p.summary.trim()).not.toBe('');
+      expect(p.tech.length).toBeGreaterThan(0);
+    }
+  });
+
   it('gives every unlocked interior a summary', () => {
     for (const p of Object.values(projects)) {
       if (!p.locked && p.interior) expect(p.summary.trim()).not.toBe('');

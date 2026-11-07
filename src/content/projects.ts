@@ -78,6 +78,39 @@ export const projects: Record<string, Project> = {
     teaser: 'Under construction: a live control room for everything running in Docker.',
     interior: null,
   },
+  'action-detection': {
+    id: 'action-detection',
+    title: 'Action Detection',
+    summary:
+      'Football action detection: a real-time analysis tool that combines computer vision with generative AI to narrate what happens on the pitch out loud, with context-aware commentary and text-to-speech. Built with PyTorch and the OpenAI API, using AI coding assistants throughout.',
+    tech: ['Python', 'PyTorch', 'Computer Vision', 'OpenAI API', 'TTS'],
+    links: [{ label: 'TFG-codebase on GitHub', url: `${GITHUB}/TFG-codebase` }],
+    locked: false,
+    teaser: '',
+    interior: 'action-detection',
+  },
+  'volunteer-pwa': {
+    id: 'volunteer-pwa',
+    title: 'Volunteer PWA',
+    summary:
+      'A responsive app for coordinating volunteers that works on mobile and desktop. It made task management 40% more efficient for NGOs, with role-based access control and audit logging for privacy and accountability.',
+    tech: ['Python', 'FastAPI', 'React', 'PWA'],
+    links: [],
+    locked: false,
+    teaser: '',
+    interior: 'volunteer-pwa',
+  },
+  'secure-voting': {
+    id: 'secure-voting',
+    title: 'Secure Voting',
+    summary:
+      'A scalable voting platform built with Django, strict OOP design patterns, encryption protocols and integrity constraints. Votes are handled tamper-proof, and the results are visualised in real time.',
+    tech: ['Python', 'Django', 'Encryption', 'OOP patterns'],
+    links: [],
+    locked: false,
+    teaser: '',
+    interior: 'secure-voting',
+  },
 };
 
 export function getProject(id: string): Project | undefined {

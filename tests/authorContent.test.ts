@@ -30,6 +30,12 @@ describe('author content', () => {
     expect(projects.about.summary).toContain('Dublin, Ireland');
   });
 
+  it('links Action Detection to its TFG codebase and keeps the other CV projects link-free', () => {
+    expect(projects['action-detection'].links).toEqual([{ label: 'TFG-codebase on GitHub', url: 'https://github.com/alblopnov/TFG-codebase' }]);
+    expect(projects['volunteer-pwa'].links).toEqual([]);
+    expect(projects['secure-voting'].links).toEqual([]);
+  });
+
   it('does not publish a phone number or name an employer', () => {
     const all = JSON.stringify(projects);
     expect(all).not.toMatch(/\+\d{2}\s?\d{2}/);

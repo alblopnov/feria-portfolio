@@ -78,3 +78,34 @@ export const CPIECES = {
   creditsSign: { col: 12, row: 0, w: 2, h: 1, offset: CUSTOM_OFFSET },
   noria: { col: 7, row: 4, w: 5, h: 4, offset: CUSTOM_OFFSET }, // distant ferris wheel
 };
+
+// ---------- Third tileset: feria-projects.png (the CV project casetas and their rooms) ----------
+// It follows feria-custom in the maps (firstgid = base + custom tilecount + 1).
+export const PROJECT_COLUMNS = 16;
+export const PROJECT_ROWS = 8;
+export const PROJECT_OFFSET = CUSTOM_OFFSET + CUSTOM_COLUMNS * CUSTOM_ROWS;
+
+/** Local indices inside feria-projects.png (add PROJECT_OFFSET when placing them in a map). */
+export const PT = {
+  CAMERA: 15, // camera on a tripod, outside the football caseta
+  NOTICE_OUT: 31, // small noticeboard outside the volunteers caseta
+  BALLOT_OUT: 47, // padlocked ballot box outside the town hall
+  MIC: 63, // commentary desk with a microphone
+  COMM_DESK: 79, // commentary desk with headphones and notes
+  SIGNUP_L: 90, // sign-up table: clipboard
+  SIGNUP_R: 91, // sign-up table: pens and flyers
+  TURF: 92, // pitch-striped carpet
+  CARPET: 93, // navy carpet with gold dots
+  BOOTH: 94, // voting booth with a curtain
+  BOXES: 95, // donation boxes
+};
+
+export const PPIECES = {
+  secureVoting: { col: 0, row: 0, w: 5, h: 5, offset: PROJECT_OFFSET }, // town hall, door in local column 2
+  actionDetection: { col: 5, row: 0, w: 5, h: 5, offset: PROJECT_OFFSET }, // football caseta, door in local column 2
+  volunteerPwa: { col: 10, row: 0, w: 5, h: 5, offset: PROJECT_OFFSET }, // volunteers caseta, door in local column 2
+  screen: { col: 0, row: 5, w: 3, h: 2, offset: PROJECT_OFFSET }, // big screen: pitch with detection boxes
+  noticeBoard: { col: 3, row: 5, w: 3, h: 2, offset: PROJECT_OFFSET }, // task cards
+  resultsBoard: { col: 6, row: 5, w: 3, h: 2, offset: PROJECT_OFFSET }, // live results
+  ballotBox: { col: 9, row: 5, w: 1, h: 2, offset: PROJECT_OFFSET }, // ballot box with a padlock
+};

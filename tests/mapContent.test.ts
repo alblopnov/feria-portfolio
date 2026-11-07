@@ -72,12 +72,33 @@ describe('feria.json', () => {
     }
   });
 
+  it('places the CV project casetas on their streets, drawn from feria-projects, with a walkable approach', () => {
+    const collision = layers.find((l) => l.name === 'collision')!.data!;
+    const decor = layers.find((l) => l.name === 'decor')!.data!;
+    const at = (data: number[], x: number, y: number) => data[y * feria.width + x];
+    const doorRow = { 'secure-voting': 6, 'action-detection': 16, 'volunteer-pwa': 16 };
+    for (const [id, row] of Object.entries(doorRow)) {
+      const door = objects.filter((o) => o.type === 'building' && o.id === id);
+      expect(door.length, id).toBe(1);
+      const { x, y } = door[0].tile;
+      expect(y, id).toBe(row);
+      expect(at(collision, x, y), id).not.toBe(0);
+      expect(at(collision, x, y + 1), `${id} approach`).toBe(0);
+      expect(at(decor, x, y), id).toBeGreaterThanOrEqual(feria.tilesets[2].firstgid);
+    }
+  });
+
+  it('keeps the middle of the avenue walkable from the street down to the portada', () => {
+    const collision = layers.find((l) => l.name === 'collision')!.data!;
+    for (let y = 7; y < 29; y++) for (const x of [19, 20]) expect(collision[y * feria.width + x], `${x},${y}`).toBe(0);
+  });
+
   it('has the portada spawn', () => {
     expect(objects.some((o) => o.type === 'spawn' && o.id === 'portada')).toBe(true);
   });
 
-  it('only uses tile gids covered by its tilesets (base and feria-custom)', () => {
-    expect(feria.tilesets.map((t) => t.name)).toEqual(['feria', 'feria-custom']);
+  it('only uses tile gids covered by its tilesets (base, feria-custom and feria-projects)', () => {
+    expect(feria.tilesets.map((t) => t.name)).toEqual(['feria', 'feria-custom', 'feria-projects']);
     const maxGid = Math.max(...feria.tilesets.map((t) => t.firstgid + t.tilecount - 1));
     const used = layers.flatMap((l) => l.data ?? []);
     expect(used.some((g) => g > feria.tilesets[1].firstgid - 1)).toBe(true);
