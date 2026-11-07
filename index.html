@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Feria Portfolio</title>
     <style>
-      html, body { margin: 0; height: 100%; background: #1b1209; overflow: hidden; }
-      #game { width: 100vw; height: 100vh; }
+      html, body { margin: 0; height: 100%; background: #1b1209; overflow: hidden; touch-action: none; overscroll-behavior: none; }
+      /* 100vh first for older browsers; 100dvh follows the phone's visible area as its toolbars show and hide. */
+      #game { width: 100vw; height: 100vh; height: 100dvh; }
     </style>
   </head>
   <body>
