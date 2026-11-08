@@ -27,7 +27,8 @@ being built.
 | Hide or show the controls help | H | "? Controls" button (top left) |
 
 A controls cheat sheet sits in the top-left corner. It folds into a small "? Controls" button after your
-first step (or ten seconds), and the button or the H key brings it back.
+first step (or ten seconds), and the button or the H key brings it back. It has a Close button, and on a phone
+tapping the panel (or taking a step) puts it away too.
 
 Everything you can use is marked: a bobbing arrow floats over doors, signs, people and furniture, each
 building has a name tag ("(soon)" for the ones still being built). Walking into an open caseta takes you

@@ -15,6 +15,10 @@ describe('nameTagFor', () => {
     expect(nameTagFor(building('ml-classifier'), getProject('ml-classifier'))).toBe('ML CLASSIFIER\n(SOON)');
   });
 
+  it('wraps a long project name onto two lines', () => {
+    expect(nameTagFor(building('action-detection'), getProject('action-detection'))).toBe('ACTION\nDETECTION');
+  });
+
   it('has no tag for non-buildings or buildings with an unknown project', () => {
     expect(nameTagFor(obj('npc'), undefined)).toBeNull();
     expect(nameTagFor(building('nope'), undefined)).toBeNull();

@@ -54,4 +54,19 @@ describe('HelpVisibility', () => {
     v.autoCollapse();
     expect(v.isOpen()).toBe(true);
   });
+
+  it('closes for good with close(), so a later auto-collapse changes nothing', () => {
+    const v = new HelpVisibility();
+    v.close();
+    expect(v.isOpen()).toBe(false);
+    v.autoCollapse();
+    expect(v.isOpen()).toBe(false);
+  });
+
+  it('can be reopened with toggle() after close()', () => {
+    const v = new HelpVisibility();
+    v.close();
+    v.toggle();
+    expect(v.isOpen()).toBe(true);
+  });
 });

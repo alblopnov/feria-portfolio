@@ -36,6 +36,12 @@ export class HelpVisibility {
     this.open = !this.open;
   }
 
+  /** An explicit close by the player; like toggle(), it stops the automatic fold from touching it again. */
+  close(): void {
+    this.manual = true;
+    this.open = false;
+  }
+
   autoCollapse(): void {
     if (!this.manual) this.open = false;
   }

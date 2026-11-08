@@ -6,6 +6,8 @@ import { DialogueBox } from '../systems/DialogueBox';
 import { doorTiming, prefersReducedMotion } from '../systems/doorTiming';
 import { canMove, resolveDirection, step, type Direction, type Tile } from '../systems/gridMovement';
 import { hasMarker, nameTagFor } from '../systems/hints';
+import { screenScale, sharpen } from '../systems/TextQuality';
+import { tagFontPx, textResolution } from '../systems/uiText';
 import { facingTile, findInteractable } from '../systems/interaction';
 import { parseObjects, type MapObject } from '../systems/mapObjects';
 import { audioGate, isMuted, playSfx, toggleMute } from '../systems/sound';
@@ -13,6 +15,8 @@ import { isTouchDevice } from '../systems/touchControls';
 import { TouchPad } from '../systems/TouchPad';
 import { LinkOverlay, safeLinks } from '../systems/LinkOverlay';
 
+/** A clean, bold system sans for the name tags: pixel-style monospace turns to mush when the canvas is scaled. */
+const TAG_FONT = 'system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const KEY_DIRS: Record<string, Direction> = {
   ArrowUp: 'up',
   KeyW: 'up',
@@ -58,6 +62,8 @@ export abstract class GridScene extends Phaser.Scene {
   private bounds = { width: 0, height: 0 };
   /** On-screen stick and A button; only created on touch devices. */
   private touch: TouchPad | null = null;
+  /** The floating name tags; their size and sharpness follow the screen scale. */
+  private tagTexts: Phaser.GameObjects.Text[] = [];
 
   /** Called for the object in front of the player when Z/Enter is pressed. */
   protected abstract interact(obj: MapObject): void;
@@ -75,6 +81,7 @@ export abstract class GridScene extends Phaser.Scene {
     this.inputLocked = false;
     this.ready = false;
     this.touch = null;
+    this.tagTexts = [];
     this.facing = facing;
   }
 
@@ -115,6 +122,10 @@ export abstract class GridScene extends Phaser.Scene {
     this.setupAudio();
     this.touch = isTouchDevice() ? new TouchPad(this, () => this.onInteractKey()) : null;
     this.addMarkers();
+    this.ready = true;
+    this.restyleText();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.restyleText, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.restyleText, this));
     this.cameras.main.fadeIn(doorTiming(prefersReducedMotion()).fadeIn, 0, 0, 0);
     this.ready = true;
   }
@@ -131,12 +142,25 @@ export abstract class GridScene extends Phaser.Scene {
       const project = getProject(obj.id);
       const tag = nameTagFor(obj, project);
       if (!tag) continue;
-      this.add
-        .text(cx, top - 12, tag, { fontFamily: 'monospace', fontSize: '8px', align: 'center', color: project?.locked ? '#d8c9a8' : '#f6f1e4', backgroundColor: project?.locked ? '#5a4a3a' : '#2e1d12', padding: { x: 2, y: 1 } })
+      const label = this.add
+        .text(cx, top - 12, tag, { fontFamily: TAG_FONT, fontStyle: 'bold', fontSize: '8px', align: 'center', color: project?.locked ? '#d8c9a8' : '#f6f1e4', backgroundColor: project?.locked ? '#5a4a3a' : '#2e1d12', padding: { x: 3, y: 2 } })
         .setOrigin(0.5, 1)
-        .setResolution(4)
         .setDepth(markerDepth);
+      this.tagTexts.push(label);
     }
+  }
+
+  /** Keeps text readable and sharp on any screen: tags never fall below about 11 screen pixels, and all text is drawn at the screen's pixel density. */
+  private restyleText(): void {
+    if (!this.ready) return;
+    const scale = screenScale(this.scale);
+    const resolution = textResolution(scale, window.devicePixelRatio || 1);
+    const size = tagFontPx(scale);
+    for (const tag of this.tagTexts) {
+      tag.setFontSize(size);
+      sharpen(tag, resolution);
+    }
+    this.dialogue.setResolution(resolution);
   }
 
   /** First key or pointer press unlocks audio (browser autoplay rules); the mute button is always on screen. */

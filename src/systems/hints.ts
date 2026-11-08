@@ -1,5 +1,6 @@
 import type { Project } from '../content/projects';
 import type { MapObject } from './mapObjects';
+import { wrapTag } from './uiText';
 
 const MARKED: ReadonlySet<MapObject['type']> = new Set(['building', 'door', 'npc', 'sign', 'jukebox', 'bookshelf', 'desk', 'exhibit']);
 
@@ -11,6 +12,6 @@ export function hasMarker(obj: MapObject): boolean {
 /** The name floating over a building; locked ones say they are coming soon. */
 export function nameTagFor(obj: MapObject, project: Project | undefined): string | null {
   if ((obj.type !== 'building' && obj.type !== 'door') || !project) return null;
-  const name = project.title.toUpperCase();
+  const name = wrapTag(project.title.toUpperCase());
   return project.locked ? `${name}\n(SOON)` : name;
 }

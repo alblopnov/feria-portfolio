@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { paginate } from './dialoguePager';
+import { sharpen } from './TextQuality';
 
 const CHARS_PER_LINE = 28;
 const LINES_PER_PAGE = 3;
@@ -40,6 +41,12 @@ export class DialogueBox {
       .setVisible(false);
     scene.tweens.add({ targets: this.arrow, alpha: 0.2, duration: 400, yoyo: true, repeat: -1 });
     this.container = scene.add.container(MARGIN, top, [frame, this.label, this.arrow]).setScrollFactor(0).setDepth(1000).setVisible(false);
+  }
+
+  /** Redraws the text at the screen's pixel density so it stays crisp when the canvas is scaled. */
+  setResolution(resolution: number): void {
+    sharpen(this.label, resolution);
+    sharpen(this.arrow, resolution);
   }
 
   /** Shows `text`; `onClose` runs once when the visitor closes the last page. */
